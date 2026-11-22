@@ -63,10 +63,13 @@ When changing it:
   (`.apm/skills/feat/scripts/`) and their bash tests (`tests/`);
   `mise run lint` runs them all and `actionlint` on `.github/workflows/`,
   `mise run test:tracker`, `mise run test:spec-number`,
-  `mise run test:story`, `mise run test:state`, `mise run test:sizes` and
-  `mise run test:step` the offline tests. `step.sh` is the one call a
-  coordinator makes at each boundary: Bash 3.2, no jq, no Python; its
-  tests are `tests/step` (fixtures in, expected output out).
+  `mise run test:story`, `mise run test:state`, `mise run test:sizes`,
+  `mise run test:step` and `mise run test:ship` the offline tests.
+  `step.sh` is the one call a coordinator makes at each boundary: Bash
+  3.2, no jq, no Python; its tests are `tests/step` (fixtures in,
+  expected output out). `ship.sh` runs the shipper's git and gh steps
+  (two calls, three modes), under the same rules: Bash 3.2, no jq, no
+  Python; its tests are `tests/ship` (throwaway repos, a stub `gh`).
   `measure.py` is the one shipped Python script and
   `docs/diagrams/sizes.py` the repo-only one: Python 3.11 or later,
   standard library only (constitution principle V); `mise run lint`

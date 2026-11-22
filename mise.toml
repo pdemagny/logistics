@@ -25,6 +25,7 @@ run = [
   "shellcheck tests/story/run.sh",
   "shellcheck tests/state/run.sh tests/state/bin/gh",
   "shellcheck tests/step/run.sh",
+  "shellcheck tests/ship/run.sh tests/ship/bin/gh",
   "shellcheck tests/sizes/run.sh",
   "shellcheck tests/measure/run.sh tests/measure/bin/*",
   "actionlint",
@@ -65,6 +66,7 @@ test -f .claude/skills/feat/scripts/secret-scan.sh
 test -f .claude/skills/feat/scripts/story.sh
 test -f .claude/skills/feat/scripts/state.sh
 test -f .claude/skills/feat/scripts/step.sh
+test -f .claude/skills/feat/scripts/ship.sh
 test -f .claude/skills/feat/scripts/measure.py
 test -f .claude/skills/feat/sizes.json
 test -f .claude/skills/feat/sizes.tsv
@@ -111,6 +113,10 @@ run = "bash tests/step/run.sh"
 [tasks."test:sizes"]
 description = "Run sizes.py's offline tests (fixture sizes.json and stale copies, scratch roots)"
 run = "bash tests/sizes/run.sh"
+
+[tasks."test:ship"]
+description = "Run the ship script's offline tests (a template repo and bare origin copied per case, stub gh, golden outputs)"
+run = "bash tests/ship/run.sh"
 
 [tasks.docs]
 description = "Build the documentation website (README.md and docs/, see hugo.toml) into public/"

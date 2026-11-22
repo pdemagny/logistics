@@ -1,0 +1,13 @@
+PR: conflict
+Command for the user: none
+Conflicts:
+- src/a.sh
+Commits:
+- @H1@ docs(specs): specify x
+- @H2@ feat(x): add new
+Left uncommitted: .specify/feature.json
+Docs updated: none
+Wrote:
+- @TOP@/specs/001-x/reports/r-ship.md
+Not verified:
+- n/a → mise run lint → killed after 10 min

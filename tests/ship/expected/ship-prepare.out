@@ -1,0 +1,6 @@
+Prepared: ship
+Notes: @TOP@/specs/001-x/reports/ship-notes.md
+Commits:
+- @H1@ docs(specs): specify x
+- @H2@ feat(x): add new
+Left uncommitted: .specify/feature.json

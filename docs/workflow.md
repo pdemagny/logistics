@@ -422,22 +422,40 @@ readability one change at a time with tests after each.
 Before each shipper spawn, `/feat` marks the state file `done (shipping)`,
 so the copy the shipper commits is already done and `/feat resume` skips
 the run once it is pushed (a ship interrupted before the push, its branch
-with no upstream, is still resumed). The shipper numbers the spec dir
-with `.apm/skills/feat/scripts/spec-number.sh`: after fetching `origin/<default>`, the next number free on it and in every open
+with no upstream, is still resumed). The shipper updates the docs the
+project asks for, writes a notes file (each commit's subject and paths,
+the PR summary, the points to look at, its own not verified items) and
+makes two calls to `.apm/skills/feat/scripts/ship.sh`, running the
+project's checks in between and fixing what fails. The script does every
+git and gh step, the same way every time.
+
+`ship.sh prepare` checks the notes before touching anything, then numbers
+the spec dir with `.apm/skills/feat/scripts/spec-number.sh`: after fetching `origin/<default>`, the next number free on it and in every open
 same-repo PR (the `specs/NNN-*` paths among its files, all pages, or its
 branch name when it has no spec files; fork PRs and numbers longer than
 four digits are ignored), so two features shipped at the same time get different numbers
 whatever their branches are called. The branch keeps its `<short-name>`.
-Just before pushing it checks the number again and, if another PR took it
-meanwhile, renumbers and folds the change into the unpushed commits.
-Updates the docs the project asks for, commits by the project's rules
-(default: `docs(specs)` then `feat(scope)` with its docs; `perf` and `refactor`
-only when separable),
-stages only the feature's files, rebases, pushes, opens a non-draft PR with
-the brief, accepted design changes, review results and numbers, a `Not
-verified` section (every logged item and the ship's own unrun checks, or
-`none`), and a link to the state file. If git is blocked in the session, it returns one `!`
-command for you to run. If the spec-number script fails (git or gh error),
+It commits by the notes, in their order (the shipper follows the
+project's rules; default: `docs(specs)` then `feat(scope)` with its docs;
+`perf` and `refactor` only when separable), staging only the paths each
+commit lists and never `reports/`, scans the staged lines for secrets
+before each commit, and rebases onto `origin/<default>`. A commit message
+holding a closing keyword or a secret is refused. A stop in `prepare`
+puts the tree back as it found it: nothing committed, nothing staged.
+
+`ship.sh publish` folds the check fixes into their commits, checks the
+number again and, if another PR took it meanwhile, renumbers and folds the
+change into the unpushed commits, scans the lines it is about to push for
+secrets, pushes, and opens a non-draft PR titled with the main commit,
+with the brief, accepted design changes, review results and numbers, a
+`Not verified` section (every logged item and the ship's own unrun
+checks, or `none`), a link to the state file and `Closes #N`. It runs
+the same secret rules over the PR body before pushing, and never pushes
+the default branch. A stop after the push (a `gh` failure) can be retried
+with `publish` alone. If the session blocks the call, the shipper returns
+one `! cd … && bash … ship.sh prepare … && bash … ship.sh publish …`
+command for you to run, holding only paths and fixed words. If the
+spec-number script fails (git or gh error),
 nothing is pushed: `/feat` shows its `! spec-number: error: …` line as an
 error and sets the state file back to `8 Ship`, so `/feat resume` picks
 the run up again. Resume also skips a run whose branch has a merged or
@@ -561,7 +579,8 @@ read only by a `rebase` run.
 - **The log**: every move, kept or refused, gets a `move —` line in the
   state file's Log (format in `move.md`, written by `step.sh`), so
   `resume` and the PR body show it.
-- **The push**: `feat-shipper` in rebase mode, on the ship row, commits
+- **The push**: `feat-shipper` in rebase mode, on the ship row, through
+  the same two `ship.sh` calls, commits
   the move's mechanical check fixes in a commit of their own, then the
   move's Log lines alone (`docs(specs): log rebase onto <short sha>`,
   holding only Log lines: the local `done (PR #N)` mark stays out),
@@ -571,7 +590,9 @@ read only by a `rebase` run.
   that PR head, nothing is overwritten, and the run says so. It scans for
   secrets twice: the staged files before each commit, and before the push
   the lines the PR brings onto the new main, none of main's own commits.
-  It adds a
+  Before the push it checks that the PR's head is the run's branch and
+  the PR is in this repo. A check that fails after the move is listed
+  under `Not verified`, never fixed at this point. It adds a
   note under `### Rebases` in the PR body (what was resolved alone, what
   you decided, the checks), and points the body's state-file link at the
   new path when the spec number changed.
@@ -613,10 +634,12 @@ reviewer groups are `sizes.json`'s `fix` part.
   fix mode it applies the review fixes (phase 4).
 - **`feat-code-reviewer`**, unchanged, with a subset of its lenses.
 - **`feat-shipper`** in fix mode commits `fix(<scope>)` with the
-  `.specify/bugs/<slug>/` trail and opens the PR, whose `Not verified`
-  section holds only its own unrun checks. Never merges. Before
+  `.specify/bugs/<slug>/` trail and opens the PR through the same two
+  `ship.sh` calls, with no numbering and `Fixes #N`; its `Not verified`
+  section lists the implementer's logged items, then its own unrun
+  checks. Never merges. Before
   committing it runs `.apm/skills/feat/scripts/secret-scan.sh` on the
-  staged diff: only added lines count, and a match (a vendor token prefix,
+  staged diff (as `/feat`'s ship now does too): only added lines count, and a match (a vendor token prefix,
   or a key named password, token, secret or api key holding a literal
   value) stops the ship with `<file>:<line>` and the rule, never the
   value. The tracker refuses an issue body by the same rules.

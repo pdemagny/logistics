@@ -30,6 +30,7 @@ jobs:
       - run: mise run test:tracker
       - run: mise run test:spec-number
       - run: mise run test:secret-scan
+      - run: mise run test:ship
       - run: mise run test:measure
       - run: mise run test:story
       - run: mise run test:state

@@ -348,7 +348,7 @@ so on.
 | `/fix` stops at setup and names `specify extension add bug` | Run it in the project, then `/fix` again |
 | `tracker: error: …` at the start of a run | Check `.logistics.yml` is committed and pushed, and `gh auth refresh -s project` ([board tracking](install.md#5-board-tracking-optional)) |
 | A `[!] tracker:` line at a gate | A board move failed; the run went on. Move the card by hand |
-| The run ends with a line starting `! cd … && git …` | Git or `gh` was blocked in the session. Type that line as is: the `!` runs it in Claude Code |
+| The run ends with a line starting `! cd … && bash … ship.sh prepare …` | The ship script was blocked in the session. Type that line as is: the `!` runs it in Claude Code |
 | The run ends with `! spec-number: error: …` | Nothing was pushed. Fix the cause (usually `gh` auth or network), then `/feat resume` |
 | Your PR conflicts after another one merged | `/feat rebase <PR>` (or `/fix rebase <PR>`) ([When main moves](#when-main-moves)) |
 | `rebase` ends with `! push refused: …` | Someone pushed to the PR since the run started; nothing was overwritten and the branch is back on the PR's head. Look at what they pushed, then run `rebase` again |

@@ -32,7 +32,8 @@ SECRET_VENDOR=(
   slack-token 'xox[bp]-'
   openai-key '(^|[^A-Za-z0-9_])s[k]-'
 )
-# Matched against the lowercased line. Groups: 1 key, 2 separator, 3 value.
+# Matched case-insensitively (nocasematch: bash 3.2 has no lowercase
+# expansion). Groups: 1 key, 2 separator, 3 value.
 SECRET_KEY='(password|passwd|token|secret|api[_-]?key)["'\'']?[[:space:]]*(:=|=>|[:=])[[:space:]]*'
 SECRET_QUOTED="$SECRET_KEY"'("[^"$[:space:]]{8,}"|'\''[^'\''$[:space:]]{8,}'\'')'
 SECRET_BARE="$SECRET_KEY"'([a-z0-9_/+=.@-]{20,})[[:space:]]*$'
@@ -40,21 +41,29 @@ SECRET_BARE="$SECRET_KEY"'([a-z0-9_/+=.@-]{20,})[[:space:]]*$'
 # secret_line_rule <line>: 0 and SECRET_RULE set to the rule's name when the
 # line matches one, else 1.
 secret_line_rule() {
-  local i lower
+  local i hit=1 nocase=0
   SECRET_RULE=""
+  # the vendor prefixes match case-sensitively, the key literal in any case;
+  # the caller's nocasematch is put back as it was
+  if shopt -q nocasematch; then nocase=1; fi
+  shopt -u nocasematch
   for ((i = 0; i < ${#SECRET_VENDOR[@]}; i += 2)); do
     if [[ "$1" =~ ${SECRET_VENDOR[i + 1]} ]]; then
       SECRET_RULE="${SECRET_VENDOR[i]}"
-      return 0
+      hit=0
+      break
     fi
   done
-  lower="${1,,}"
-  if [[ "$lower" =~ $SECRET_QUOTED ]] ||
-    { [[ "$lower" =~ $SECRET_BARE ]] && [[ "${BASH_REMATCH[3]}" =~ [0-9] ]]; }; then
-    SECRET_RULE=key-literal
-    return 0
+  if [ "$hit" = 1 ]; then
+    shopt -s nocasematch
+    if [[ "$1" =~ $SECRET_QUOTED ]] ||
+      { [[ "$1" =~ $SECRET_BARE ]] && [[ "${BASH_REMATCH[3]}" =~ [0-9] ]]; }; then
+      SECRET_RULE=key-literal
+      hit=0
+    fi
   fi
-  return 1
+  if [ "$nocase" = 1 ]; then shopt -s nocasematch; else shopt -u nocasematch; fi
+  return "$hit"
 }
 
 # secret_rule <text>: secret_line_rule over each line of <text>.

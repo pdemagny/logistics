@@ -9,4 +9,5 @@ spawn: feat-shipper
   continue: fresh
   not verified items: none
   security bug: no
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	5	@TOP@/specs/x/reports/5-ship.md

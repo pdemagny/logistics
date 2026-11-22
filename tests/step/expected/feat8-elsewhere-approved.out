@@ -9,4 +9,5 @@ spawn: feat-shipper
   continue: fresh
   not verified items:
   - T004 → manual run → no terminal
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	8	@TOP@/specs/x/reports/8-ship-2.md

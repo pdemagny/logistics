@@ -78,6 +78,7 @@ rules this skill follows. The values it refers to are below.
 - *Implement row*: `6`. *Ship row*: `8`.
 - *Number check*: the spec-number script.
 - *Secret-scan script*: `<this skill's base dir>/scripts/secret-scan.sh`.
+- *Ship script*: `<this skill's base dir>/scripts/ship.sh`.
 
 ## Phases
 
@@ -324,17 +325,18 @@ instructions; `approved` → phase 8 as it is.
 
 `step.sh` sets `done (shipping)` before each shipper spawn, so the copy the
 shipper commits is already done. Give `feat-shipper` the state file, the
-*state script* (`State script:`), the conventions, the worktree, the
-default branch, the spec-number script (`<this skill's base
-dir>/scripts/spec-number.sh`) and the issue, if any. It numbers the spec
-dir, updates the docs the conventions call for, commits (default:
-`docs(specs)` then `feat(scope)` with its docs; `perf` and `refactor`
-only when separable), pushes and opens the PR, or reports `blocked` or
+*state script* (`State script:`), the spawn block's `ship script` (`Ship
+script:`), the conventions, the worktree, the default branch, the
+spec-number script (`<this skill's base dir>/scripts/spec-number.sh`),
+the *secret-scan script* and the issue, if any. It updates the docs the
+conventions call for, writes its notes (the commit split among them),
+runs `ship.sh prepare` (numbering, commits, rebase), the checks, then
+`ship.sh publish` (secret scan, push, PR), or reports `blocked` or
 `conflict`. Never merge.
 
 - `done: PR #N`: the final message.
 - `stop: ship blocked on a command for you`: give the `command:` line to
-  the user as is (git or gh blocked in the session); the state file stays
+  the user as is (`ship.sh` blocked in the session); the state file stays
   done (resume finds the run while its branch has no upstream).
 - `hard:` `ship blocked`: show the `command:` line as an error, not a
   command; `approved` ships again.

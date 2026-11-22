@@ -1,0 +1,4 @@
+hard:
+- ship blocked
+command: ! secret scan: src/new.sh:2 matches key-literal
+answer call:	8	@TOP@/specs/x/reports/8-ship.md	sum=8-ship.md:@SUM@
