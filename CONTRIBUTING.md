@@ -72,8 +72,8 @@ work in this repo. The ones that bite most:
 
 - `mise run lint`, `mise run test:apm`, `mise run test:tracker`,
   `mise run test:spec-number`, `mise run test:story`,
-  `mise run test:state`, `mise run test:sizes`, `mise run test:step`
-  and `mise run test:measure` pass. The `check`
+  `mise run test:state`, `mise run test:sizes`, `mise run test:step`,
+  `mise run test:ship` and `mise run test:measure` pass. The `check`
   workflow runs the same on every pull request.
 - For a change to a skill or agent prompt, run it on a scratch project and
   say in the PR what you ran and what happened. There is no automated test

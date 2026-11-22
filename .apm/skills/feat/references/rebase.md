@@ -104,8 +104,8 @@ own reports, from the digests (never a report file).
      'ship'`, and spawn `feat-shipper` in rebase mode on the *ship row*
      with that report path, the worktree, default branch,
      branch, PR URL, lease, state file, `State script:` (the *state
-     script*), conventions, *number check*,
-     *secret-scan script*, `Check fixes:` (the files of the `Resolved
+     script*), `Ship script:` (the *ship script*), conventions, *number
+     check*, *secret-scan script*, `Check fixes:` (the files of the `Resolved
      alone:` lines marked `check fix:`, or `none`) and the PR note `-
      Rebased onto <new> (<date>): resolved alone <files | none>; decided
      <file → answer | none>; checks <result>[; not verified: <items>]`;

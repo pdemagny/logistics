@@ -81,6 +81,7 @@ missing, stop: "/fix needs logistics' `feat` skill
 - *Number check*: none.
 - *Secret-scan script*: `<this skill's base
   dir>/../feat/scripts/secret-scan.sh`.
+- *Ship script*: `<this skill's base dir>/../feat/scripts/ship.sh`.
 
 ## Phases
 
@@ -399,17 +400,19 @@ before ship, and a `failed` there is a hard gate, with no retry.
 
 `step.sh` sets `done (shipping)` before the shipper spawn, so the copy the
 shipper commits is already done. Give `feat-shipper` (fix mode) the state
-file, the *state script* (`State script:`), the conventions, the worktree,
-the default branch, the bug dir, the secret-scan script (`<this skill's
-base dir>/../feat/scripts/secret-scan.sh`) and the issue ref (none when
+file, the *state script* (`State script:`), the spawn block's `ship
+script` (`Ship script:`), the conventions, the worktree, the default
+branch, the bug dir, the secret-scan script (`<this skill's base
+dir>/../feat/scripts/secret-scan.sh`) and the issue ref (none when
 `Issue: none`: then the PR has no `Fixes` line; else `Fixes <ref>`); its
 spawn block says `security bug: yes|no`. It updates the docs the
-conventions call for, commits `fix(<scope>)` with the trail, pushes and
-opens the PR, or reports `blocked` or `conflict`. Never merge.
+conventions call for and, through `ship.sh prepare` and `ship.sh
+publish`, commits `fix(<scope>)` with the trail, pushes and opens the PR,
+or reports `blocked` or `conflict`. Never merge.
 
 - `done: PR #N`: the final message.
 - `stop: ship blocked on a command for you`: give the `command:` line to
-  the user as is (git or gh blocked here); the state file stays done
+  the user as is (`ship.sh` blocked here); the state file stays done
   (resume finds the run while its branch has no upstream).
 - `hard:` `ship blocked`: show the `command:` line as an error (`! secret
   scan: …` or another hard failure: nothing committed); `approved` ships

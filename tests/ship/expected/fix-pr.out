@@ -1,0 +1,10 @@
+PR: https://github.com/o/r/pull/42
+Command for the user: none
+Conflicts: none
+Commits:
+- @H1@ fix(a): echo b
+Left uncommitted: specs/
+Docs updated: none
+Wrote:
+- @TOP@/.specify/bugs/b/reports/5-ship.md
+Not verified: none

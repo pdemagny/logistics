@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 8 Ship
+# /feat state: Test feature
+--
+- [x] 8 Ship [hard] — ship blocked

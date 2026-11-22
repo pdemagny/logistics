@@ -1577,6 +1577,7 @@ enter_ship() {
       skey 'security bug' no
     fi
   fi
+  skey 'ship script' "$SDIR/ship.sh"
   out_call 22 'boundary:' "$SHIP" "$RPATH"
 }
 

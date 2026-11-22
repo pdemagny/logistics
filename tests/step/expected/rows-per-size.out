@@ -73,6 +73,7 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   not verified items: none
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess small
 soft
@@ -133,6 +134,7 @@ spawn: feat-shipper
   continue: fresh
   not verified items: none
   security bug: no
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	5	@TOP@/specs/x/reports/5-ship.md
 # feat 2 Specify medium
 soft
@@ -209,6 +211,7 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   not verified items: none
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess medium
 soft
@@ -269,6 +272,7 @@ spawn: feat-shipper
   continue: fresh
   not verified items: none
   security bug: no
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	5	@TOP@/specs/x/reports/5-ship.md
 # feat 2 Specify large
 soft
@@ -345,6 +349,7 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   not verified items: none
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess large
 soft
@@ -405,4 +410,5 @@ spawn: feat-shipper
   continue: fresh
   not verified items: none
   security bug: no
+  ship script: @SKILL@/scripts/ship.sh
 boundary:	5	@TOP@/specs/x/reports/5-ship.md

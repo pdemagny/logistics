@@ -157,14 +157,21 @@ call_line() {
   IFS=$'\t' read -r -a CALL <<<"${line#*:$'\t'}"
 }
 
+# case_log: LOG = the state file's Size, Current phase and Agents lines, its
+# title and its new Log lines, as expected/<case>.log holds them
+case_log() {
+  LOG="$(awk '/^## /{exit} /^- (Size|Current phase|Agents): /' "$sf"; head -n 1 "$sf"; printf -- '--\n'; tail -n +"$((before + 1))" "$sf")"
+  LOG="${LOG//"$top"/@TOP@}"
+  subst "$LOG"
+  LOG="$SUBST"
+}
+
 # check <golden name> <exit code>: exit code, stdout and the state file's changes
 check() {
   local name="$1" log
   [ "$rc" = "$2" ] || fail "$name: exit $rc, want $2"
-  log="$(awk '/^## /{exit} /^- (Size|Current phase|Agents): /' "$sf"; head -n 1 "$sf"; printf -- '--\n'; tail -n +"$((before + 1))" "$sf")"
-  log="${log//"$top"/@TOP@}"
-  subst "$log"
-  log="$SUBST"
+  case_log
+  log="$LOG"
   if [ "$update" = 1 ]; then
     printf '%s\n' "$out" >"$ex/$name.out"
     printf '%s\n' "$log" >"$ex/$name.log"
@@ -742,6 +749,68 @@ fix_at "fix 5: PR, security bug no" 'done (shipping)'
 put shipper/pr 5-ship
 run fix "$sf" 5 "$R"
 check fix5-pr 0
+
+# --- ship.sh's reports at the ship boundary ------------------------------------------------
+# The reports ship.sh printed in tests/ship (its expected/ goldens) as the
+# shipper's report: each gets the verdict of the shipper fixture it stands
+# for, so the parser takes the script's report unchanged (FR-021, SC-004).
+
+# ship_golden <golden> <its artifact dir> <the case's dir> <key>: the golden as
+# <the case's dir>/reports/<key>.md, its artifact dir and report name written
+# as the case's (rebase mode's r-ship.md is the ship boundary's 8-ship.md)
+# and @H<n>@ as a 7-hex hash; R = its path
+ship_golden() {
+  R="$top/$3/reports/$4.md"
+  sed -e "s#@TOP@/$2/#$top/$3/#g" -e "s#@TOP@#$top#g" -e 's/@H\([0-9]\)@/\1\1\1\1\1\1\1/g' \
+    -e "s#/reports/[a-z0-9]*-ship\\.md\$#/reports/$4.md#" "$root/tests/ship/expected/$1.out" >"$R"
+  grep -q '@' "$R" && fail "$1: a placeholder left in the report"
+  return 0
+}
+
+# same_as <golden> [<sed expression>]: exit 0, stdout and the state file's
+# changes those of expected/<golden>, the expression applied to it
+same_as() {
+  local sx="${2:-s#^##}"
+  [ "$rc" = 0 ] || fail "exit $rc, want 0"
+  [ "$out" = "$(sed "$sx" "$ex/$1.out")" ] || fail "stdout differs from expected/$1.out"
+  case_log
+  [ "$LOG" = "$(sed "$sx" "$ex/$1.log")" ] || { out="$LOG"; fail "state file differs from expected/$1.log"; }
+}
+
+# ship_numbered <golden> <key>: a /feat case at done (shipping), its dir
+# numbered 001 as ship.sh numbers it and the golden put there, then the ship
+# boundary on the report's old path
+ship_numbered() {
+  new_case "ship.sh $1 at the ship boundary" feat
+  S set 'Current phase' 'done (shipping)'
+  [ "$1" != ship-conflict ] || S log '- [x] 8 Ship'
+  mv "$top/specs/x" "$top/specs/001-x"
+  ship_golden "$1" specs/001-x specs/001-x "$2"
+  old_sf="$sf"
+  sf="$top/specs/001-x/feat-state.md"
+  run feat "$old_sf" 8 "$top/specs/x/reports/$2.md"
+}
+
+ship_numbered ship-pr 8-ship
+same_as feat8-renumbered 's#/specs/012-x/#/specs/001-x/#g'
+ship_numbered rebase-pr 8-ship
+same_as feat8-renumbered 's#/specs/012-x/#/specs/001-x/#g'
+ship_numbered ship-conflict 8-ship
+same_as ship-conflict 's#/specs/012-x/#/specs/001-x/#g'
+
+fix_at "ship.sh fix-pr at the ship boundary" 'done (shipping)'
+ship_golden fix-pr .specify/bugs/b specs/x 5-ship
+run fix "$sf" 5 "$R"
+same_as fix5-pr
+
+new_case "ship.sh ship-blocked at the ship boundary" feat
+S set 'Current phase' 'done (shipping)'
+S log '- [x] 8 Ship'
+ship_golden ship-blocked specs/x specs/x 8-ship
+run feat "$sf" 8 "$R"
+check ship-sh-blocked 0
+[ "$(printf '%s\n' "$out" | head -n 2)" = "$(head -n 2 "$ex/feat8-elsewhere.out")" ] || fail "want the blocked verdict of feat8-elsewhere"
+[ "$(tail -n 1 "$sf")" = '- [x] 8 Ship [hard] — ship blocked' ] || fail "want the blocked Log line"
 
 # --- answers ------------------------------------------------------------------------------
 

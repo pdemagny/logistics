@@ -1,0 +1,13 @@
+PR: https://github.com/o/r/pull/42
+Command for the user: none
+Conflicts: none
+Commits:
+- @H1@ docs(specs): specify x
+- @H2@ feat(x): add new
+Left uncommitted: .specify/feature.json
+Docs updated: none
+Wrote:
+- @TOP@/specs/001-x
+- @TOP@/specs/001-x/reports/8-ship.md
+Not verified:
+- n/a → live run → no credentials

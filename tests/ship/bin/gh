@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Stub gh for tests/ship: logs its argv, one call per line, to
+# $SHIP_CASE/calls and answers from case files in $SHIP_CASE, printing what
+# the caller's --jq filter would print.
+#   repo-url     `repo view`: the URL (default https://github.com/o/r)
+#   pr-url       `pr create`: the new PR's URL (default .../pull/42)
+#   pr-view      `pr view`: its lines as printed (head, URL, then the body)
+#   prs          `pr list`: "<number> <isCrossRepository> <branch>" lines
+#   files-<n>    `api .../pulls/<n>/files`: one filename per line
+#   fail-<verb>  that call exits 1 with `HTTP 502` on stderr; verbs: repo,
+#                create, view, edit, list, api
+# `pr create` and `pr edit` copy their --body-file to pr-body and
+# pr-edit-body.
+set -euo pipefail
+c="${SHIP_CASE:?SHIP_CASE not set}"
+printf '%s\n' "$*" >>"$c/calls"
+
+failing() {
+  if [ -e "$c/fail-$1" ]; then
+    echo "HTTP 502" >&2
+    exit 1
+  fi
+}
+
+# body_to <file> <args>...: the --body-file argument's content copied
+body_to() {
+  local out="$1" prev="" a
+  shift
+  for a in "$@"; do
+    if [ "$prev" = --body-file ]; then cat -- "$a" >"$out"; return 0; fi
+    prev="$a"
+  done
+  echo "stub gh: no --body-file" >&2
+  exit 1
+}
+
+case "${1:-} ${2:-}" in
+  "repo view")
+    failing repo
+    if [ -e "$c/repo-url" ]; then cat "$c/repo-url"; else echo "https://github.com/o/r"; fi
+    ;;
+  "pr create")
+    failing create
+    body_to "$c/pr-body" "$@"
+    if [ -e "$c/pr-url" ]; then cat "$c/pr-url"; else echo "https://github.com/o/r/pull/42"; fi
+    ;;
+  "pr view")
+    failing view
+    cat "$c/pr-view"
+    ;;
+  "pr edit")
+    failing edit
+    body_to "$c/pr-edit-body" "$@"
+    ;;
+  "pr list")
+    failing list
+    if [ -e "$c/prs" ]; then cat "$c/prs"; fi
+    ;;
+  api\ *)
+    failing api
+    n=""
+    for a in "$@"; do
+      case "$a" in
+        repos/\{owner\}/\{repo\}/pulls/*/files)
+          n="${a#repos/\{owner\}/\{repo\}/pulls/}"
+          n="${n%/files}"
+          ;;
+      esac
+    done
+    [ -n "$n" ] || { echo "stub gh: unexpected api call: $*" >&2; exit 1; }
+    if [ -e "$c/files-$n" ]; then cat "$c/files-$n"; fi
+    ;;
+  *)
+    echo "stub gh: unexpected call: $*" >&2
+    exit 1
+    ;;
+esac

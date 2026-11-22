@@ -1,0 +1,10 @@
+PR: blocked
+Command for the user: ! secret scan: src/new.sh:2 matches key-literal
+Conflicts: none
+Commits: none
+Left uncommitted: src/a.sh, docs/extra.md, specs/, src/new.sh
+Docs updated: none
+Wrote:
+- @TOP@/specs/x/reports/8-ship.md
+Not verified:
+- n/a → live run → no credentials
