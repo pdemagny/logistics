@@ -51,6 +51,7 @@ TOKEN_LABELS = {
 TOKEN_KINDS = ("input", "cache_write_5m", "cache_write_1h", "cache_read", "output")
 
 SPAWN_TOOLS = ("Agent", "Task")
+WAIT_TOOLS = SPAWN_TOOLS + ("SendMessage",)  # calls whose result the coordinator waits for
 SHIPPER = "feat-shipper"
 
 
@@ -596,6 +597,11 @@ def _parse_session(sess, info):
     failed = Counter()
     timeline = {"agents": 0.0, "user": 0.0, "thinking": 0.0, "tools": 0.0}
     answers = 0
+    # A batch ends when its last result arrives; the next counted model call is recorded in firsts.
+    open_ids = set()  # tool_use ids of the current spawn batch still without a result
+    batch_mid = None  # message id of the call that opened the batch
+    armed = False  # the batch is complete: the next counted call is its first
+    firsts = []  # message ids of the first call after each batch
     prev = inv["time"]
     for rec in recs[inv["index"] + 1 :]:
         if rec is BAD:
@@ -621,7 +627,20 @@ def _parse_session(sess, info):
             if t is None:
                 reason = reason or "event without timestamp"
                 continue
-            for b in calls.add(rec, msg, t):
+            uses = calls.add(rec, msg, t)
+            mid = as_str(msg.get("id"))
+            if mid in calls.by_id:
+                if armed and mid != batch_mid:
+                    firsts.append(mid)
+                    armed = False
+                waits = [as_str(b.get("id")) for b in uses if as_str(b.get("name")) in WAIT_TOOLS]
+                if waits:
+                    if mid != batch_mid:
+                        batch_mid = mid
+                        open_ids = set()
+                        armed = False
+                    open_ids.update(waits)
+            for b in uses:
                 tid = as_str(b.get("id"))
                 name = as_str(b.get("name")) or "unknown"
                 tool_names[tid] = name
@@ -635,6 +654,10 @@ def _parse_session(sess, info):
                 result = rec.get("toolUseResult")
                 for b in results:
                     tid = as_str(b.get("tool_use_id"))
+                    if tid in open_ids:
+                        open_ids.discard(tid)
+                        if not open_ids:
+                            armed = True
                     name = tool_names.get(tid, "unknown")
                     error = b.get("is_error") is True
                     if error:
@@ -681,6 +704,7 @@ def _parse_session(sess, info):
 
     coordinator, call_reason = calls.finish()
     reason = reason or call_reason
+    after_spawn = sum(1 for mid in firsts if not calls.by_id[mid]["tools"])
 
     agents = []
     sub = os.path.join(sess["dir"], "subagents")
@@ -719,6 +743,7 @@ def _parse_session(sess, info):
         "session": sess["id"], "repo": sess["repo"], "skill": inv["skill"], "date": info["date"],
         "shipped": any(a["type"] == SHIPPER for a in agents), "status": status,
         "calls": coordinator, "failed": failed, "timeline": timeline, "answers": answers, "agents": agents,
+        "after_spawn": after_spawn,
     }
 
 
@@ -895,7 +920,7 @@ def run_figures(run, weights, missing):
     contexts = [context(c) for c in coord]
     figs = {
         "coord": {
-            "calls": len(coord), "spawn": kinds["spawn"], "chore": kinds["chore"], "text": kinds["text"],
+            "after_spawn": run["after_spawn"], "calls": len(coord), "spawn": kinds["spawn"], "chore": kinds["chore"], "text": kinds["text"],
             "ctx_first": contexts[0] if contexts else None,
             "ctx_median": statistics.median(contexts) if contexts else None,
             "ctx_max": max(contexts) if contexts else None,
@@ -1008,6 +1033,7 @@ def render_block(heading, agg, single=False):
         row("spawn an agent", fnum(c["spawn"])),
         row("chores", fnum(c["chore"])),
         row("text only", fnum(c["text"])),
+        row("text only after a spawn", fnum(c["after_spawn"])),
         row("context, first call", ftok(c["ctx_first"])),
         row("context, median of calls", ftok(c["ctx_median"])),
         row("context, max of calls", ftok(c["ctx_max"])),
@@ -1136,6 +1162,7 @@ def render_compare(heading, before, since):
         ("spawn", "spawn an agent", fnum, None),
         ("chore", "chores", fnum, None),
         ("text", "text only", fnum, None),
+        ("after_spawn", "text only after a spawn", fnum, None),
         ("ctx_first", "context, first call", ftok, None),
         ("ctx_median", "context, median of calls", ftok, None),
         ("ctx_max", "context, max of calls", ftok, None),

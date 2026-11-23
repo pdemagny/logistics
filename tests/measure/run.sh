@@ -165,7 +165,8 @@ run_case() {
 #   420 + 20 + 80 + 2 = 522 s. Answers 1. Tokens in 5060, cw 4000, cr 25740,
 #   out 730.
 # /feat medians of 4 (mean of the middle two): calls 5 (4,5,5,6), spawn 2,
-#   chores 1 (0,1,1,2), text 2 (1,2,2,3); ctx first 4510 (4010,4010,5010,
+#   chores 1 (0,1,1,2), text 2 (1,2,2,3), text only after a spawn 1.5 (sess-feat-1
+#   1, sess-feat-2 2, sess-feat-3 1, sess-feat-6 2); ctx first 4510 (4010,4010,5010,
 #   6010), median 5610 (4010,5210,6010,6910), max 6080 (5010,5210,6950,
 #   8010); share (59.19 + 71.18) / 2 = 65%; failed Bash 2, Edit 1 (totals).
 #   planner 4 runs: 1 spawn, 2 calls, ctx 3000, (17.84 + 18.81) / 2 = 18%,
@@ -488,7 +489,8 @@ chmod a-w "$(dirname "$target")"
 # repo `unknown`, the error text never printed. sess-sur-1, a finished /fix
 # run in odd whose last coordinator call has the model id claude-opus\ud800-5
 # (a lone surrogate): printed with `?` in its place. sess-note-1 (the
-# `notification` case below) is the second counted run. Exit 0, then 1 with
+# `notification` case below) is the second counted run; sess-async-1 and
+# sess-fg-1 (the `after-spawn` case) are the third and fourth. Exit 0, then 1 with
 # --strict. No golden file: the lines below, and no traceback.
 current="edge"
 for want in 0 1; do
@@ -498,7 +500,7 @@ for want in 0 1; do
   out="$(cd "$work/app" && CLAUDE_CONFIG_DIR="$work/edge" python3 -I "$script" "${args[@]}" 2>&1)" || rc=$?
   [ "$rc" -eq "$want" ] || fail "exit $rc, not $want with ${args[*]}: $out"
   for line in \
-    "runs: 2 counted (2 finished, 0 unfinished, 0 resumed), 1 left out" \
+    "runs: 4 counted (4 finished, 0 unfinished, 0 resumed), 1 left out" \
     "  sess-nul-1  2026-03-21  unexpected record shape  (Claude Code 2.1.330)  unknown" \
     "unweighted models: claude-opus?-5 (weighted as 5)"; do
     grep -qxF -- "$line" <<<"$out" || fail "no line: $line: $out"
@@ -535,6 +537,23 @@ for line in \
   grep -qxF -- "$line" <<<"$out" || fail "no line: $line: $out"
 done
 if grep -q 'SECRET-\|Traceback' <<<"$out"; then fail "output holds fixture or error text: $out"; fi
+printf 'ok %s\n' "$current"
+
+# after-spawn: `text only after a spawn` (FR-010), --session over fixtures/edge.
+# sess-async-1: two background spawns, each result `async_launched` and
+# followed by a text-only turn (2); then the peer reports and a Bash call,
+# which are not counted. sess-fg-1: a two-spawn foreground batch and a
+# foreground shipper, each result `completed` and followed by a Bash call or
+# the final text after a chore (0).
+current="after-spawn"
+for want in "sess-async-1|2" "sess-fg-1|0"; do
+  rc=0
+  out="$(cd "$work/app" && CLAUDE_CONFIG_DIR="$work/edge" python3 -I "$script" --session "${want%|*}" 2>&1)" || rc=$?
+  [ "$rc" -eq 0 ] || fail "exit $rc: $out"
+  line="$(grep -F '  text only after a spawn' <<<"$out")" || fail "no text only after a spawn line: $out"
+  [ "${line##* }" = "${want#*|}" ] || fail "${want%|*}: $line, not ${want#*|}"
+  if grep -q 'SECRET-\|Traceback' <<<"$out"; then fail "output holds fixture or error text: $out"; fi
+done
 printf 'ok %s\n' "$current"
 
 # window: one date bound only; the missing side prints as `start` or `now`

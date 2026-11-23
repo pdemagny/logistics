@@ -114,6 +114,14 @@ shares need not add up to 100%.
 - `model calls`, split into calls that `spawn an agent`, `chores` (tool
   calls but no agent, including a `SendMessage` to an agent already
   running) and `text only`;
+- `text only after a spawn`: how many of the `text only` calls come first
+  after a spawn batch. A batch is the `Agent`, `Task` and `SendMessage`
+  calls of one model call; the figure counts the first call after the
+  batch's last result, when it has no tool call. It shows the waiting turn
+  of background spawns (the coordinator answers "agent launched, waiting"
+  and a model call is spent); with foreground spawns it is about 0
+  (`SendMessage` continuations aside). See
+  [install.md](install.md#6-wait-for-agents-optional);
 - `context, first call`, `context, median of calls`, `context, max of
   calls`: the tokens in its context (input, cache write and cache read) at
   its first call, and the median and largest over all its calls;
