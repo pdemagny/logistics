@@ -1,0 +1,13 @@
+kind: brief
+brief: @TOP@/specs/briefs/x.md
+brief in checkout: yes
+title: Do x
+size: medium
+size note: ~10 tasks, one script
+short name: x
+map: none
+issue: none
+behaviour: 2 lines
+acceptance: 2 lines
+install: ok
+stop: board check failed: tracker: error: board users/u/projects/9 not found

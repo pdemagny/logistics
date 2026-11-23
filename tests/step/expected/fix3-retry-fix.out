@@ -9,5 +9,6 @@ spawn: feat-bug-assessor
   continue: fresh
   cycle: retry
   inputs: @TOP@/specs/x/reports/3-test-2.in.md
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	3	@TOP@/specs/x/reports/3-test-2.md
 answer call:	2	@TOP@/specs/x/reports/2-fix.md	sum=2-fix.md:@SUM@

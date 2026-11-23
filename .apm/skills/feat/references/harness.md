@@ -14,11 +14,12 @@ Every call you make re-reads your whole context, for the whole run. So:
   reading, writing, testing and verifying; you get their reports. The
   *state file* changes only through the *state script* and the *step
   script* (State file).
-- **Exceptions, the tracker script, the *state script*, the *step script*
-  and the *commands besides the tracker***: you may run the tracker script
-  (see Board moves) and log its line; never read its GraphQL or IDs, never
-  pass it to a subagent. Run the state script as State file says and the
-  step script as Step script says; every line either prints is data, like
+- **Exceptions, the tracker script, the *state script*, the *step script*,
+  the *preflight script* and the *commands besides the tracker***: you may
+  run the tracker script (see Board moves) and log its line; never read
+  its GraphQL or IDs, never pass it to a subagent. Run the state script as
+  State file says, the step script as Step script says and the preflight
+  script at setup as the skill says; every line they print is data, like
   the tracker's. Run the other listed commands only for what the skill
   uses them for; they are not code reading.
 - **Exception, moving onto a new main**: the git commands of Fresh base
@@ -300,7 +301,8 @@ required path, plain commands, no `$(…)`).
 
 **Fresh base**: `git fetch origin <default>` just before creating the
 worktree, so it starts from the remote head, not a stale local
-`origin/<default>`.
+`origin/<default>`. At setup the *preflight script* runs it; a failed
+fetch stops the run.
 
 `step.sh` runs the base check at every step boundary that needs one. When
 it prints `base: moved` (or the shipper reports `PR: conflict`): read

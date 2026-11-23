@@ -1,0 +1,11 @@
+kind: symptom
+title: it's $(touch pwned) and `touch pwned2`
+issue: none
+author: user
+install: ok
+bug extension: 1.4.2
+board: off
+default: main
+fetch: ok
+hooks allowed: none
+slug: it-s-touch-pwned

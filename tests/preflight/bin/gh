@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Stub gh for tests/preflight: logs its argv, one call per line, to
+# $PF_CASE/gh-calls and answers from case files in $PF_CASE, printing what
+# the caller's --jq filter would print.
+#   repo                 `repo view`: nameWithOwner (default o/r)
+#   issue-<o>-<r>-<N>    `api repos/<o>/<r>/issues/<N>`: the
+#                        "<association>\t<title>" line (absent: HTTP 404)
+#   fail-<verb>          that call exits 1 with `HTTP 502` on stderr; verbs:
+#                        repo, api
+set -euo pipefail
+c="${PF_CASE:?PF_CASE not set}"
+printf '%s\n' "$*" >>"$c/gh-calls"
+
+failing() {
+  if [ -e "$c/fail-$1" ]; then
+    echo "HTTP 502: Bad Gateway" >&2
+    exit 1
+  fi
+}
+
+case "${1:-} ${2:-}" in
+  "repo view")
+    failing repo
+    if [ -e "$c/repo" ]; then cat "$c/repo"; else echo "o/r"; fi
+    ;;
+  api\ repos/*/*/issues/*)
+    failing api
+    p="${2#repos/}"
+    o="${p%%/*}" p="${p#*/}"
+    r="${p%%/*}" p="${p#*/issues/}"
+    f="$c/issue-$o-$r-$p"
+    if [ -e "$f" ]; then
+      cat "$f"
+    else
+      echo "gh: Not Found (HTTP 404)" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "stub gh: unexpected call: $*" >&2
+    exit 1
+    ;;
+esac

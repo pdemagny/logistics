@@ -1,0 +1,3 @@
+kind: issue
+pointer: /brief #7
+stop: /feat builds from a brief, not an issue: write the brief first

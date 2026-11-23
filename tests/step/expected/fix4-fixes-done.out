@@ -8,4 +8,5 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test.md
   continue: fresh
   cycle: after review fixes
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	3	@TOP@/specs/x/reports/3-test.md

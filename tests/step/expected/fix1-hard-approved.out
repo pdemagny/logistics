@@ -8,4 +8,5 @@ spawn: feat-implementer
   effort: medium
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	2	@TOP@/specs/x/reports/2-fix.md

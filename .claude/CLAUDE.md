@@ -64,12 +64,18 @@ When changing it:
   `mise run lint` runs them all and `actionlint` on `.github/workflows/`,
   `mise run test:tracker`, `mise run test:spec-number`,
   `mise run test:story`, `mise run test:state`, `mise run test:sizes`,
-  `mise run test:step` and `mise run test:ship` the offline tests.
+  `mise run test:step`, `mise run test:ship`, `mise run test:preflight`
+  and `mise run test:trail` the offline tests.
   `step.sh` is the one call a coordinator makes at each boundary: Bash
   3.2, no jq, no Python; its tests are `tests/step` (fixtures in,
   expected output out). `ship.sh` runs the shipper's git and gh steps
   (two calls, three modes), under the same rules: Bash 3.2, no jq, no
   Python; its tests are `tests/ship` (throwaway repos, a stub `gh`).
+  `preflight.sh` runs a coordinator's setup checks (two calls, before and
+  after `EnterWorktree`) and `trail.sh` the bug trail's chores (rotate,
+  sections, slug, redact, sourcing `secret-scan.sh`'s rules), under the
+  same rules; their tests are `tests/preflight` (throwaway repos, a stub
+  `gh` and tracker) and `tests/trail` (fixtures, golden outputs).
   `measure.py` is the one shipped Python script and
   `docs/diagrams/sizes.py` the repo-only one: Python 3.11 or later,
   standard library only (constitution principle V); `mise run lint`

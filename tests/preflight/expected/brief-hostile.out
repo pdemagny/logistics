@@ -1,0 +1,16 @@
+kind: brief
+brief: @TOP@/specs/briefs/evil.md
+brief in checkout: yes
+title: $(touch pwned) `id` x
+size: small
+size note: none
+short name: evil
+map: none
+issue: #1; rm -rf ~
+behaviour: 2 lines
+acceptance: 2 lines
+install: ok
+board: off
+default: main
+fetch: ok
+hooks allowed: none

@@ -33,7 +33,7 @@ Where things are:
 
 ```
 .apm/skills/feat/             the orchestrator: phases and gate messages (no size table); sizes.json (the source of models, efforts, loads, reviewer groups), sizes.tsv (generated from it, read by step.sh)
-.apm/skills/feat/scripts/     step.sh (the one call at each phase boundary: checks reports, decides gates, logs, prints the next spawn), tracker.sh (board moves), spec-number.sh (numbers the spec dir), story.sh (a story's tasks), state.sh (writes and queries the state file, report paths), secret-scan.sh, measure.py (run cost)
+.apm/skills/feat/scripts/     step.sh (the one call at each phase boundary: checks reports, decides gates, logs, prints the next spawn), tracker.sh (board moves), spec-number.sh (numbers the spec dir), story.sh (a story's tasks), state.sh (writes and queries the state file, report paths), ship.sh (the shipper's git and gh steps), preflight.sh (setup checks, hooks read as data, the /fix slug, the worktree's branch rename), trail.sh (rotate, sections, slug and redact for the bug trail), secret-scan.sh, measure.py (run cost)
 .apm/skills/feat/references/  harness.md: the coordinators' share of the rules /feat and /fix share (step script, gates, state file, board, resume); move.md (when main moved); rebase.md (the rebase entry point)
 .apm/skills/fix/              the bugfix orchestrator: assess, fix, test, review, ship (no size table)
 .apm/skills/brief/            phase 1: interview, size, brief or capability map

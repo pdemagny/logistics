@@ -1,0 +1,4 @@
+kind: brief
+brief: several
+candidate: @TOP@/specs/briefs/x.md
+candidate: @C@/wt2/specs/briefs/x.md

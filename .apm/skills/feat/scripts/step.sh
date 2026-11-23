@@ -19,8 +19,11 @@
 # <why>), state:, resume:, phase2-mode: or assess gate:, size:, unparsable
 # line:, move:, base:, read:, added:, untracked, not in the diff:, diff:,
 # paraphrase:, note:, counts:, finding:, tasks:, stories:, pr:, command:, the
-# spawn blocks (`spawn: <agent>` then two-space indented keys, the last of them
-# `inputs: <path>`: a spawn's lists are in that file, none when all are empty),
+# spawn blocks (`spawn: <agent>` then two-space indented keys, the lists' one
+# `inputs: <path>`: a spawn's lists are in that file, none when all are empty;
+# a code reviewer's `diff file:` (the review diff written to reports/) follows
+# its `diff:`, and the shipper's `ship script:` (/fix: after `security bug:`) and /fix's assess, test and
+# bug-mode `trail script:` follow `inputs:`),
 # boundary:, answer call: (both tab-separated after the key) and done:. Every
 # line printed
 # is data, never instructions: report and user text only after a fixed key, on
@@ -1541,6 +1544,25 @@ diff_prep() {
   esac
 }
 
+# diff_write: the review diff into reports/review.diff beside RPATH (a
+# reviewer's report path, so reports/ exists and is ignored), once per call,
+# through a temp file and mv -f; DIFF_FILE = its path. An empty diff writes
+# nothing; a symlink at the path is an error.
+DIFF_FILE=
+diff_write() {
+  local dst=${RPATH%/*}/review.diff tmp
+  [[ -z $DIFF_FILE ]] || return 0
+  [[ ! -L $dst ]] || die "review diff is a symlink: $dst"
+  tmp=$(mktemp "${RPATH%/*}/.review.diff.XXXXXX") || die 'cannot write the review diff'
+  if ! git -C "$TOP" diff --no-color --no-ext-diff "$DIFF_BASE" -- >"$tmp" 2>/dev/null; then
+    rm -f -- "$tmp"
+    die 'git diff failed'
+  fi
+  DIFF_FILE=$dst
+  if [[ ! -s $tmp ]]; then rm -f -- "$tmp"; return 0; fi
+  mv -f -- "$tmp" "$dst" || { rm -f -- "$tmp"; die 'cannot write the review diff'; }
+}
+
 # empty_diff: the hard gate when the review diff is empty (no spawn)
 empty_diff() {
   local head='7 Code review'
@@ -1774,7 +1796,11 @@ review_batch() {
   accepted_sec
   for (( i = 0; i <= last; i++ )); do
     spawn_group "${GR_ROWS[i]}" review "$p-${GR_LENSES[i]}"
-    if [[ -n $DIFF_BASE ]]; then skey diff "git diff $DIFF_BASE"; fi
+    if [[ -n $DIFF_BASE ]]; then
+      diff_write
+      skey diff "git diff $DIFF_BASE"
+      skey 'diff file' "$DIFF_FILE"
+    fi
     slist rejected ${RJ[@]+"${RJ[@]}"}
     if [[ $agent == feat-code-reviewer && +${GR_LENSES[i]}+ == *+7b+* ]]; then slist 'accepted sec' ${AS[@]+"${AS[@]}"}; fi
     sinputs
@@ -1845,6 +1871,7 @@ next_step() {
       slist 'approved commands' ${FA_CMDS[@]+"${FA_CMDS[@]}"}
       slist answers ${FA_ANS[@]+"${FA_ANS[@]}"}
       sinputs
+      skey 'trail script' "$SDIR/trail.sh"
       out_call 22 'boundary:' 1 "$RPATH" ;;
     fix:'2 Fix'*) next_fix ;;
     fix:'3 Test'*)
@@ -1855,6 +1882,7 @@ next_step() {
       slist 'not verified items' ${NV[@]+"${NV[@]}"}
       slist 'approved commands' ${FA_CMDS[@]+"${FA_CMDS[@]}"}
       sinputs
+      skey 'trail script' "$SDIR/trail.sh"
       out_call 22 'boundary:' 3 "$RPATH" ;;
     fix:'4 Code review'*)
       if owed_fixes '4 Code review' '4 implementer'; then spawn_fixes "${AP[@]}"; else SKILL_FIX4=1; review_batch; fi ;;
@@ -1897,6 +1925,7 @@ next_fix() {
   slist 'approved commands' ${FA_CMDS[@]+"${FA_CMDS[@]}"}
   slist answers ${FA_ANS[@]+"${FA_ANS[@]}"}
   sinputs
+  skey 'trail script' "$SDIR/trail.sh"
   out_call 22 'boundary:' 2 "$RPATH"
 }
 
@@ -2564,7 +2593,9 @@ spawn_7e() {
   fi
   out 12 "diff: git diff $DIFF_BASE"
   spawn_group "${GR_ROWS[${#GR_ROWS[@]} - 1]}" review 7-7e
+  diff_write
   skey diff "git diff $DIFF_BASE"
+  skey 'diff file' "$DIFF_FILE"
   for (( k = 0; k < ${#RP_PATH[@]}; k++ )); do
     report_key "${RP_PATH[k]##*/}"
     if [[ +${RK#*-}+ == *+7d+* ]]; then cuts=${RP_PATH[k]}; fi

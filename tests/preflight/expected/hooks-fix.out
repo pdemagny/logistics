@@ -1,0 +1,14 @@
+kind: issue
+title: Save button crashes
+issue: #7
+github: yes
+author: MEMBER
+install: ok
+bug extension: 1.4.2
+board: off
+default: main
+fetch: ok
+hook would branch or commit: before_specify: git.speckit.git.feature → run it by hand: /speckit-git-feature
+hook would branch or commit: after_implement: git.speckit.git.commit → run it by hand: /speckit-git-commit
+hooks allowed: after_implement: docs.speckit.docs.update
+slug: 7-save-button-crashes

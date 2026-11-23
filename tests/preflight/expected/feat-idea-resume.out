@@ -1,0 +1,4 @@
+kind: idea
+pointer: /brief "resume button crashes"
+pointer: /fix "resume button crashes" (if it describes a bug)
+stop: /feat builds from a brief, not an idea: write the brief first

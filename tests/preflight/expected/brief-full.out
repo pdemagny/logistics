@@ -1,0 +1,16 @@
+kind: brief
+brief: @TOP@/specs/briefs/full.md
+brief in checkout: yes
+title: Full one
+size: large
+size note: ~30 tasks, two scripts
+short name: full
+map: specs/maps/m.md#full
+issue: #12
+behaviour: 2 lines
+acceptance: 2 lines
+install: ok
+board: off
+default: main
+fetch: ok
+hooks allowed: none
