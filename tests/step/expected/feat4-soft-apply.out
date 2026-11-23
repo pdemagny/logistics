@@ -10,8 +10,6 @@ spawn: feat-planner
   effort: low
   report: @TOP@/specs/x/reports/3-plan.md
   continue: p1
-  apply:
-  - D1 [cost] — the page size is fetched per item — at: plan.md: Approach — fix: fetch it once — severity: medium — rec: apply
-  - D2 [sec] — the token file is world-readable — at: plan.md: Secrets — fix: create it 0600 — severity: high — rec: apply
+  inputs: @TOP@/specs/x/reports/3-plan.in.md
 boundary:	3	@TOP@/specs/x/reports/3-plan.md	agent=<id>
 answer call:	4	@TOP@/specs/x/reports/4-4a+4b+4c.md	sum=4-4a+4b+4c.md:@SUM@

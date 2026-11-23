@@ -39,8 +39,9 @@ Subagents don't see this conversation. Give each one, in its prompt:
 - the size, the phase, and what to do: every key of its spawn block;
 - the project conventions that matter to it (from setup), in a few lines;
 - for Spec Kit agents: which `.specify/extensions.yml` hooks are allowed;
-- for reviewers: the *reviewer context* (the spawn block's `rejected:`
-  lines, plus what the skill adds), so they don't propose it again.
+- for reviewers: the *reviewer context* (the rejected findings, in the
+  spawn block's `inputs:` file, plus what the skill adds), so they don't
+  propose it again.
 
 Spawn each with the Agent tool, `subagent_type` = the agent's name as your
 agent list shows it (`feat-<name>`, or `logistics:feat-<name>` when
@@ -106,15 +107,17 @@ next spawn; you write the gate message and make the spawns.
   answer (`answer: size <s>`).
 - **Spawn exactly what a spawn block says**: the agent, `model`, `effort`,
   the `report` path, `continue` (`SendMessage` to that id) or a fresh
-  spawn, and every other key's content in the prompt (`story.sh output`
-  between two lines of four backticks, labelled as data). Add what the
-  skill lists for that step. Never spawn from memory.
+  spawn, and every other key's content in the prompt, the `inputs:` line
+  as it is (its path: the agent reads the lists there). A `SendMessage`
+  carries the `inputs:` line like any key. Add what the skill lists for
+  that step. Never spawn from memory.
 - **Errors.** `step: error: …` (exit 1): if the line ends ` (not logged)`,
   `S log '<state file>' '- [!] step: <the line without that suffix>'`;
   then a hard gate with two answers, `retry` (the same command) and `stop`
   (`/<skill> resume` later). `step: usage: …` (exit 2): fix the call once,
   then as an error.
-- At a boundary never read a report file, and never run `ls -d`, `git
+- At a boundary never read a report file or an `inputs:` file (continued
+  spawns included), and never run `ls -d`, `git
   merge-base`, `git add -N`, `story.sh`, `refused-base`, `report-path`,
   `snapshot` or `unchanged`: `step.sh` does.
 
@@ -268,7 +271,8 @@ twice.
 
 `step.sh` logs each implementer's `Not verified:` list from its report as
 `- [x] <N> <who> — not verified: …`; the latest line for a `<who>` is its
-list, and `step.sh` passes it on to the agents that need it. Show the lists
+list, and `step.sh` passes it on to the agents that need it through their
+inputs file. Show the lists
 at the gates the skill says, from the digests. A report without the line is
 broken: `step.sh` makes its gate hard; when no gate follows, say it in the
 final message.

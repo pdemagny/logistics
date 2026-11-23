@@ -1,0 +1,14 @@
+soft
+diff: git diff @SHA@
+spawn: feat-code-reviewer
+  row: 7e
+  mode: review
+  lenses: 7e
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/7-7e.md
+  continue: fresh
+  diff: git diff @SHA@
+  cuts: @TOP@/specs/x/reports/7-7d.md
+  inputs: @TOP@/specs/x/reports/7-7e.in.md
+boundary:	7e	@TOP@/specs/x/reports/7-7e.md	@TOP@/specs/x/reports/7-7a.md	@TOP@/specs/x/reports/7-7b.md	@TOP@/specs/x/reports/7-7c.md	@TOP@/specs/x/reports/7-7d.md	sum=7-7a.md:@SUM@	sum=7-7b.md:@SUM@	sum=7-7c.md:@SUM@	sum=7-7d.md:@SUM@	snapshot=@SNAP@

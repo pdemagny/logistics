@@ -7,6 +7,5 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/4-fixes.md
   continue: fresh
   who: implementer
-  apply:
-  - B1 Bugs — off-by-one on the last page — at: src/a.sh:3 — fix: use <= — confidence: high — rec: apply
+  inputs: @TOP@/specs/x/reports/4-fixes.in.md
 boundary:	4-fixes	@TOP@/specs/x/reports/4-fixes.md

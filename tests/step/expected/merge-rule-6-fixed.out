@@ -7,6 +7,5 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/7-fixes.md
   continue: fresh
   who: review fixes
-  apply:
-  - S1 Security — a token reaches the log — at: src/auth.sh:12 — fix: drop the log line — severity: high — rec: user (debug builds only)
+  inputs: @TOP@/specs/x/reports/7-fixes.in.md
 boundary:	7-fixes	@TOP@/specs/x/reports/7-fixes.md

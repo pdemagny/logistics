@@ -63,8 +63,8 @@ missing, stop: "/fix needs logistics' `feat` skill
 - *Artifact owners*: assessor: assessment.md (re-assess, "back to 1");
   implementer: code and fix.md.
 - *Agents that may be continued*: none: every spawn is fresh.
-- *Reviewer context*: the rejected findings (the spawn block's `rejected:`
-  lines) and the assessment's remediation alternatives not chosen
+- *Reviewer context*: the rejected findings (in the spawn's `inputs:`
+  file) and the assessment's remediation alternatives not chosen
   (`**Alternatives**` of Proposed Remediation).
 - *Phases that can't be skipped*: 1, 2, 3 ("skip 1", "skip 2", "skip 3"
   are refused).
@@ -240,7 +240,7 @@ report author's association, and the allowed hooks
 
 Spawn `feat-bug-assessor` with the report (the argument as given) and, on
 a re-assess, the user's added evidence (the approved commands and answers
-so far are in its spawn block).
+so far are in its spawn's `inputs:` file).
 
 **Stop** (`stop:`): the run ends here. Show the assessor's `Reasoning` and
 the `stop:` line's reason (the extension's, or the `Is a bug` value) so the
@@ -320,8 +320,9 @@ move, then the spawn.
 ## 2. Fix
 
 Spawn a fresh `feat-implementer` (bug mode); its spawn block carries the
-approved commands, the user's answers and, on a retry, the failed test
-report and what still fails. Tell it its `<who>`, `implementer` (the same
+approved commands and the user's answers are in its spawn's `inputs:`
+file; on a retry its block carries the failed test report and what still
+fails. Tell it its `<who>`, `implementer` (the same
 for every implementer of the run: the fix, its retry, phase 4's review
 fixes). Its `Not verified:` list is not shown at the gate: phase 3 settles
 it.
@@ -346,8 +347,8 @@ reason `step.sh` printed:
 ## 3. Test
 
 `step.sh` spawns a fresh `feat-bug-assessor` (test mode), never the agent
-that wrote the fix, with the cycle, the not verified items and the
-approved commands; add any environment or evidence the user supplied.
+that wrote the fix, with the cycle (its block) and the not verified items and
+approved commands (its `inputs:` file); add any environment or evidence the user supplied.
 
 - `verified`: soft; one line, then phase 4's reviewers (or phase 5 after
   review fixes).
@@ -376,7 +377,7 @@ that prints them prepared the diff (`diff:` key; `added:` and `untracked,
 not in the diff:` lines). Give each `feat-code-reviewer` the bug dir as
 its feature dir, the note "no spec.md: for the spec pass use assessment.md
 (Proposed Remediation, Tests to add or update) and fix.md", its spawn
-block's keys, no accepted `[sec]` findings, and as context the
+block's keys, and as context the
 assessment's remediation alternatives not chosen.
 
 - `security risk area`: list the findings, if any, with their `rec`;

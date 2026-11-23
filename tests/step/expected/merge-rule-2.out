@@ -11,8 +11,6 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/7-fixes.md
   continue: fresh
   who: review fixes
-  apply:
-  - B1 Bugs — off-by-one on the last page — at: src/a.sh:3-5 — fix: use <= — confidence: medium — rec: apply
-  - B2 Bugs — off-by-one in the count — at: src/a.sh:9 — fix: use <= — confidence: medium — rec: apply
+  inputs: @TOP@/specs/x/reports/7-fixes.in.md
 boundary:	7-fixes	@TOP@/specs/x/reports/7-fixes.md
 answer call:	7	@TOP@/specs/x/reports/7-7a+7b.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7a+7b.md:@SUM@	sum=7-7c+7d+7e.md:@SUM@

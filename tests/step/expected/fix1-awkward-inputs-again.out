@@ -1,0 +1,12 @@
+soft
+resume: 1 Assess
+assess gate: open
+spawn: feat-bug-assessor
+  row: 1
+  mode: assess
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/1-assess.md
+  continue: fresh
+  inputs: @TOP@/specs/x/reports/1-assess.in.md
+boundary:	1	@TOP@/specs/x/reports/1-assess.md
