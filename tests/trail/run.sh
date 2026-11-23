@@ -54,6 +54,9 @@ sample() {
     aws-key-id) S="AK""IAZQ81MXV0LW3NCR7T" ;;
     slack-token) S="xo""xb-1234-$long" ;;
     openai-key) S="s""k-proj-$long" ;;
+    bearer-token) S="Bea""rer $long" ;;
+    jwt) S="ey""J${long}Ab.${long}Cd.sig" ;;
+    url-credentials) S="https://us""er:${long}@host" ;;
     *) return 1 ;;
   esac
 }
@@ -62,7 +65,7 @@ sample() {
 fill() {
   local line r
   while IFS= read -r line || [ -n "$line" ]; do
-    for r in private-key github-token aws-key-id slack-token openai-key; do
+    for r in private-key github-token aws-key-id slack-token openai-key bearer-token jwt url-credentials; do
       sample "$r"
       line="${line//@$r@/$S}"
     done
@@ -404,7 +407,7 @@ again
 ok
 
 new_case "redact: every scan rule alone, in its own file"
-for r in private-key github-token aws-key-id slack-token openai-key; do
+for r in private-key github-token aws-key-id slack-token openai-key bearer-token jwt url-credentials; do
   sample "$r"
   printf 'x %s\n' "$S" >"$bd/$r.md"
   run redact "$bd/$r.md"
@@ -414,7 +417,39 @@ for r in private-key github-token aws-key-id slack-token openai-key; do
 done
 [ "$(cat "$bd/github-token.md")" = "x <redacted>" ] || fail "a vendor token is not <redacted> alone"
 [ "$(cat "$bd/openai-key.md")" = "x <redacted>" ] || fail "the openai rule's lead is not kept"
+[ "$(cat "$bd/bearer-token.md")" = "x <redacted>" ] || fail "the bearer rule's lead is not kept"
 [ "$(cat "$bd/private-key.md")" = "<redacted>" ] || fail "a private-key line is not one <redacted> line"
+for r in bearer-token jwt url-credentials; do
+  [ "$(cat "$bd/$r.md")" = "x <redacted>" ] || fail "$r: the file is not x <redacted>"
+done
+ok
+
+new_case "redact: bearer header, JWT and credentialed URLs"
+F="$bd/shapes.md"
+sample bearer-token
+bearer="$S"
+sample jwt
+jwt_sample="$S"
+sample url-credentials
+url_sample="$S"
+{
+  printf 'Authorization: %s\n' "$bearer"
+  printf 'remote: %s/owner/repo.git\n' "$url_sample"
+  printf 'curl %s:8080/x\n' "$url_sample"
+  printf '(%s)\n' "$jwt_sample"
+  printf 'Bea''rer <token>\n'
+  printf 'https://user:<password>@host\n'
+  printf 'git@host:owner/repo\n'
+} >"$F"
+run redact "$F"
+expect_exit 0
+[ "$out" = 4 ] || fail "count $out, want 4"
+for want in 'Authorization: <redacted>' 'remote: <redacted>' 'curl <redacted>:8080/x' '(<redacted>)' \
+  'Bea''rer <token>' 'https://user:<password>@host' 'git@host:owner/repo'; do
+  grep -qxF -- "$want" "$F" || fail "no line: $want"
+done
+scan_clean "$F"
+again
 ok
 
 new_case "redact: key values, the contract's rule 2 table line by line"

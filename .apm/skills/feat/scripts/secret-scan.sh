@@ -19,6 +19,13 @@
 # characters (letters, digits, `_/+=.@-`) holding a digit and running to the
 # end of the line. A variable, a call, an env-var reference or a short value
 # is not a literal secret.
+# Three more rules run after the vendor prefixes, which win where both match.
+# bearer-token: the word Bearer or bearer, at the line start or after a
+# character that is not a letter, digit, `_` or `-`, whitespace, then 16 or
+# more token characters (letters, digits, `._~+/-`). jwt: a part starting eyJ of 10 or
+# more base64url characters, a dot, a second part of 10 or more, a dot.
+# url-credentials: a scheme and `://`, a user, a colon, a password of 6 or
+# more characters not starting with `<`, `$` or `{`, then `@`.
 #
 # Sourced (tracker.sh does), it only defines functions and the rule
 # variables; it runs nothing.
@@ -31,6 +38,9 @@ SECRET_VENDOR=(
   aws-key-id 'AKI[A]'
   slack-token 'xox[bp]-'
   openai-key '(^|[^A-Za-z0-9_])s[k]-'
+  bearer-token '(^|[^A-Za-z0-9_-])[Bb]earer[[:space:]]+[A-Za-z0-9._~+/-]{16,}'
+  jwt 'ey[J][A-Za-z0-9_-]{7,}[.][A-Za-z0-9_-]{10,}[.]'
+  url-credentials '[A-Za-z][A-Za-z0-9+.-]{0,31}://[^/:@[:space:]]+:[^/@[:space:]<{$][^/@[:space:]]{5,}@'
 )
 # Matched case-insensitively (nocasematch: bash 3.2 has no lowercase
 # expansion). Groups: 1 key, 2 separator, 3 value.
