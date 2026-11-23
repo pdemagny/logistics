@@ -1,0 +1,7 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: done (shipping)
+# /feat state: Test feature
+--
+- [x] 7 Code review [soft] — auto-applied none
+- [x] 8 Ship

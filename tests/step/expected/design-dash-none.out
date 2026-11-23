@@ -1,0 +1,13 @@
+soft
+base: same
+paraphrase: matches
+counts: 0 findings, 0 applied, 0 skipped
+spawn: feat-tasker
+  row: 5
+  mode: first
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/5-tasks.md
+  continue: fresh
+boundary:	5	@TOP@/specs/x/reports/5-tasks.md	agent=<id>
+answer call:	4	@TOP@/specs/x/reports/4-4a+4b+4c.md	sum=4-4a+4b+4c.md:@SUM@

@@ -1,0 +1,7 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 5 Tasks
+# /feat state: Test feature
+--
+- [x] 4 Design review [soft] — auto-applied none
+    - spec assumptions: kept as recommended
