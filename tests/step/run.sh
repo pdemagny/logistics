@@ -1451,6 +1451,13 @@ printf 'more\n' >>"$top/README.md"
 run feat "$sf" "${CALL[@]}"
 check feat7-snapshot-changed 0
 
+# the coordinator's board-move Log line, written while the reviewers run, is
+# not a change outside the reports: the same output as without it
+medium7 "feat 7 medium: a state-file log line between the 7e spawn and its boundary stays soft" medium
+S log '- [!] tracker: #73 not set to "In review" (gh failed)'
+run feat "$sf" "${CALL[@]}"
+check feat7-medium-gate 0
+
 medium7 "feat 7 large: always hard" large
 run feat "$sf" "${CALL[@]}"
 check feat7-large 0
@@ -1536,6 +1543,12 @@ check fix4-perf-missing-batch 0
 
 review_case "fix 4 small: nothing found, phase 5" fix small '4 Code review' "$A1_PASS"
 put code-reviewer/7a+7b+7d-zero 4-7a+7b+7d
+run fix "$sf" "${CALL[@]}"
+check fix4-soft-zero 0
+
+review_case "fix 4 small: a state-file log line between the spawn and its boundary stays soft" fix small '4 Code review' "$A1_PASS"
+put code-reviewer/7a+7b+7d-zero 4-7a+7b+7d
+S log '- [x] tracker: #73 set to "In review"'
 run fix "$sf" "${CALL[@]}"
 check fix4-soft-zero 0
 

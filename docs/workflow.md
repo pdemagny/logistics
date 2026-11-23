@@ -75,7 +75,8 @@ fields). The coordinator never reads a report file. `reports/` holds a
 reviewers may write their report file and nothing else: `step.sh` takes a
 `state.sh snapshot` before each batch of reviewers and runs `state.sh
 unchanged` after it, so any other change to the worktree is a hard gate
-that lists the paths that changed. An agent given no report path
+that lists the paths that changed. The state file is left out: the
+coordinator logs to it while the reviewers run. An agent given no report path
 (`/tiny`'s reviewer, `/brief`'s) reports in full and writes nothing.
 
 After a soft phase 2, the next gate (3/4, or 3 on large) opens with the spec
