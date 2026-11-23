@@ -24,7 +24,7 @@
 # checkout, title, size, size note, short name, map, issue, behaviour,
 # acceptance, github, author, install, bug extension, board, default, fetch,
 # hook won't run, hook would branch or commit, hooks allowed, slug, pointer,
-# searched, stop; worktree mode: worktree, branch, flag. Text read from the
+# searched, spawn note, stop; worktree mode: worktree, branch, flag. Text read from the
 # argument, a brief, an issue or git comes only after its key, on one line,
 # control characters replaced by spaces; nothing read is evaluated or
 # executed. Nothing on stderr.
@@ -63,7 +63,7 @@ slot() {
     'short name') S=10 ;; map) S=11 ;; issue) S=12 ;; behaviour) S=13 ;; acceptance) S=14 ;;
     github) S=15 ;; author) S=16 ;; install) S=17 ;; 'bug extension') S=18 ;; board) S=19 ;;
     default) S=20 ;; fetch) S=21 ;; "hook won't run") S=22 ;; 'hook would branch or commit') S=23 ;;
-    'hooks allowed') S=24 ;; slug) S=25 ;; pointer) S=26 ;; searched) S=27 ;; stop) S=99 ;;
+    'hooks allowed') S=24 ;; slug) S=25 ;; pointer) S=26 ;; searched) S=27 ;; 'spawn note') S=28 ;; stop) S=99 ;;
     worktree) S=29 ;; branch) S=30 ;; flag) S=31 ;;
     *) S=98 ;;
   esac
@@ -879,6 +879,7 @@ elif [ "$kind" = symptom ] && [ "$has_words" = 0 ]; then
 fi
 
 emit kind "$kind"
+[ -n "${CLAUDE_CODE_FORK_SUBAGENT:-}" ] || emit 'spawn note' 'to wait for each agent instead of running it in the background, add "env": {"CLAUDE_CODE_FORK_SUBAGENT": "0"} to <repo>/.claude/settings.local.json (docs/install.md): one model call less per agent spawn in interactive sessions; "1" keeps background spawns and hides this note'
 case "$skill:$kind" in
   *:empty)
     if [ "$skill" = feat ]; then

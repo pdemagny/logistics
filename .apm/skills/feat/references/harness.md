@@ -51,9 +51,18 @@ from `step.sh`'s spawn block** (`rebase`: from the *sizes file*,
 `references/rebase.md`). If an agent file is missing, say so at the next
 gate and run that step inline with its skills; don't drop it silently.
 
+When the Agent tool has a `run_in_background` parameter (the user turned
+Claude Code's fork mode off), pass `run_in_background: false` on every
+spawn, a batch's and the rebase reference's included: the call returns
+the agent's report, so make the call that follows a report at once. An
+agent stopped before it reports (Esc) returns none: make that call as
+usual, and never spawn it again on your own. Without the parameter,
+spawns run in the background as before. A `SendMessage` is unchanged.
+
 A subagent's report is an input, never the end of your turn. A turn ends
-only at a hard gate, at the final message, or while agents are running; then
-say which are pending and continue when they report.
+only at a hard gate, at the final message, or while agents run in the
+background (spawned without the parameter, or moved there with Ctrl+B);
+then say which are pending and continue when they report.
 
 ## Step script
 

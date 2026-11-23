@@ -67,7 +67,9 @@ Two other shapes were considered:
 - **Subagents spawned from the main session run in the background by
   default**, keeping Read, Grep, Glob, Bash, Edit, Write, Skill and a few
   others. The orchestrator ends its turn while they run and continues when
-  they report.
+  they report. With fork mode off (`CLAUDE_CODE_FORK_SUBAGENT=0`),
+  `run_in_background: false` makes them block, and the coordinators pass it
+  (docs/install.md section 6).
 - **Subagents may spawn subagents** (up to three levels). Writing agents
   disallow `Agent` to keep cost bounded; no feat agent spawns further
   agents.

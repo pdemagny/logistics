@@ -132,6 +132,11 @@ case "$cmd" in
     else
       echo "note     python3 3.11 or later not found (needed by measure.py only: docs/measure.md)"
     fi
+    if [ "${CLAUDE_CODE_FORK_SUBAGENT:-}" = 0 ]; then
+      echo "ok       CLAUDE_CODE_FORK_SUBAGENT=0 (agents run in the foreground)"
+    else
+      echo "note     CLAUDE_CODE_FORK_SUBAGENT is not 0 in this shell: to wait for each agent, add \"env\": {\"CLAUDE_CODE_FORK_SUBAGENT\": \"0\"} to <repo>/.claude/settings.local.json; Claude Code sets it in its own sessions, so run check from one (! ./install.sh check) to see it (docs/install.md section 6)"
+    fi
     expect "gh authenticated" "gh auth login" gh auth status
     if has_plugin; then
       echo "ok       plugin logistics (skills and agents)"

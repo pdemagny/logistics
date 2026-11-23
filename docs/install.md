@@ -165,6 +165,12 @@ It also says whether Python 3.11 or later is there. Only
 changes the exit code: `note python3 3.11 or later not found (needed by
 measure.py only: docs/measure.md)`.
 
+It also reports `CLAUDE_CODE_FORK_SUBAGENT`: `ok` when it is `0`, else a
+`note` that never changes the exit code and never prints the value. Claude
+Code sets the variable from its settings in its own sessions only, so run
+the check from one (`! ./install.sh check`) to see it
+([section 6](#6-wait-for-agents-optional)).
+
 With a project dir it also lists the bug extension's skills. They are
 needed by `/fix` only, so neither of these lines changes the exit code:
 - `note skill <name> (needed by /fix only: specify extension add bug)`:
@@ -234,6 +240,34 @@ label create bug`) to keep issues labelled.
 account can edit and add any issue you can read to it. Each run starts by
 printing the board it will write to (`tracker: ok users/<login>/projects/<n>
 ...`); on a repo you didn't write, check that line before going on.
+
+## 6. Wait for agents (optional)
+
+By default `/feat` and `/fix` spawn agents in the background and the
+coordinator spends a model call waiting for each one (interactive
+sessions). With Claude Code's fork mode off, the coordinators pass
+`run_in_background: false`, so a spawn blocks and returns the report: one
+model call less per agent spawn. Add this to a settings file:
+
+```json
+{ "env": { "CLAUDE_CODE_FORK_SUBAGENT": "0" } }
+```
+
+Where to put it:
+- `<repo>/.claude/settings.local.json` (recommended): just you, just that
+  repo, not committed.
+- `~/.claude/settings.json`: every project; plain sessions change too, and
+  the `fork` agent type goes away.
+- Not `.logistics.yml`: it is committed and shared, and this is personal.
+
+Setting it to `1` keeps background spawns and hides the setup note.
+
+The trade-off: while an agent runs, a message you type waits. **Esc kills
+the running agent** (it returns no report; the coordinator makes its usual
+next call and never spawns it again on its own). Ctrl+B moves the agent to
+the background and the run continues the async way. `install.sh check` sees
+the value only from a Claude Code session ([section 4](#4-check)).
+[`measure.py`](measure.md) shows the effect as `text only after a spawn`.
 
 ## Updating
 
