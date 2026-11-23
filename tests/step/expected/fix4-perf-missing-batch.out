@@ -14,6 +14,4 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/4-7a+7b+7c.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
-  accepted sec: none
 boundary:	4	@TOP@/specs/x/reports/4-7a+7b+7c.md	snapshot=@SNAP@

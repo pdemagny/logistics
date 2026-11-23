@@ -14,8 +14,6 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7a+7b.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
-  accepted sec: none
 spawn: feat-code-reviewer
   row: 7c+7d+7e
   mode: review
@@ -25,5 +23,4 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7c+7d+7e.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
 boundary:	7	@TOP@/specs/x/reports/7-7a+7b.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	snapshot=@SNAP@

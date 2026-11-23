@@ -166,19 +166,55 @@ case_log() {
   LOG="$SUBST"
 }
 
+# inputs_check <golden name>: stdout holds no list line; each `inputs:` path is
+# its block's `report:` path with .md replaced by .in.md. INS = the files they
+# name, each after a `== <file name>` line ("" when there is none)
+inputs_check() {
+  local line rep='' p f
+  INS=''
+  if printf '%s\n' "$out" | grep -Eq '^  (apply|failures|rejected|accepted sec|approved commands|answers|not verified items):|^  story\.sh output'; then
+    fail "$1: stdout still holds a list line"
+  fi
+  while IFS= read -r line; do
+    case $line in
+      'spawn: '*) rep='' ;;
+      '  report: '*) rep=${line#'  report: '} ;;
+      '  inputs: '*)
+        p=${line#'  inputs: '}
+        [ -n "$rep" ] && [ "$p" = "${rep%.md}.in.md" ] || fail "$1: inputs: $p is not the report path $rep with .in.md"
+        [ -f "$p" ] || fail "$1: no inputs file $p"
+        f=$(cat "$p")
+        INS+="${INS:+
+}== ${p##*/}
+$f" ;;
+    esac
+  done <<<"$raw"
+  INS="${INS//"$top"/@TOP@}"
+  INS="${INS//"$skill"/@SKILL@}"
+  if [ -n "$INS" ]; then subst "$INS"; INS="$SUBST"; fi
+}
+
 # check <golden name> <exit code>: exit code, stdout and the state file's changes
 check() {
   local name="$1" log
   [ "$rc" = "$2" ] || fail "$name: exit $rc, want $2"
   case_log
   log="$LOG"
+  inputs_check "$name"
   if [ "$update" = 1 ]; then
     printf '%s\n' "$out" >"$ex/$name.out"
     printf '%s\n' "$log" >"$ex/$name.log"
+    if [ -n "$INS" ]; then printf '%s\n' "$INS" >"$ex/$name.in"; else command rm -f "$ex/$name.in"; fi
     updated=1
     return 0
   fi
   [ -f "$ex/$name.out" ] || fail "$name: no golden $ex/$name.out"
+  if [ -n "$INS" ]; then
+    [ -f "$ex/$name.in" ] || fail "$name: no golden $ex/$name.in"
+    [ "$INS" = "$(cat "$ex/$name.in")" ] || { out="$INS"; fail "$name: inputs files differ from expected/$name.in"; }
+  else
+    [ ! -f "$ex/$name.in" ] || fail "$name: expected/$name.in exists but no inputs: line was printed"
+  fi
   [ "$out" = "$(cat "$ex/$name.out")" ] || fail "$name: stdout differs from expected/$name.out"
   [ "$log" = "$(cat "$ex/$name.log")" ] || { out="$log"; fail "$name: state file differs from expected/$name.log"; }
 }
@@ -606,6 +642,20 @@ check fix1-hard-refused 0
 # shellcheck disable=SC2016 # the user's words, logged byte for byte
 run fix "$sf" "${CALL[@]}" 'answer: size medium (user: "go, medium")' 'security: advisory (user: "advisory, it'\''s $(rm) `x`; ok")'
 check fix1-hard-approved 0
+
+new_case "fix 1: no approved command or answer, no inputs file" fix
+run resume "$sf"
+check fix1-no-inputs 0
+[ -z "$(ls "$rd"/*.in.md 2>/dev/null)" ] || fail "fix1-no-inputs: an inputs file was written"
+
+new_case "fix 1: awkward approved command and answer, the inputs file rewritten whole" fix
+# shellcheck disable=SC2016 # the user's words, logged byte for byte
+S log '- [x] 1 Assess — approved: -x it'\''s $(rm -rf x) and `id`; ok' '- [x] 1 Assess — answer: which page? → the last'
+run resume "$sf"
+check fix1-awkward-inputs 0
+run resume "$sf"
+check fix1-awkward-inputs-again 0
+[ "$(cat "$ex/fix1-awkward-inputs.in")" = "$(cat "$ex/fix1-awkward-inputs-again.in")" ] || fail "the inputs file was not rewritten whole"
 
 new_case "fix 1 stop: invalid" fix
 put bug-assessor/assess-invalid 1-assess
@@ -1203,6 +1253,12 @@ S log '- [x] 7 Code review [soft] — auto-applied none; skipped B1 (reviewer: "
 run resume "$sf"
 check feat7-accepted-sec 0
 
+# a skipped design finding of an earlier gate comes back on rejected:
+SKIP_A1='- [x] 4 Design review [soft] — auto-applied none; skipped A1 (reviewer: "cosmetic")'
+SKIP_A1_SUB='    - A1 spec.md: FR-001 — a stray word — rec: skip (cosmetic)'
+review_case "feat 4: an earlier skipped finding on the rejected list" feat small '4 Design review' "$P2_SOFT" "$P2_NONE" "$P3_FACTS" "$SKIP_A1" "$SKIP_A1_SUB"
+check feat4-rejected 0
+
 review_case "feat 4 small: the 3 Plan facts and an open checklist item" feat small '4 Design review' \
   "$P2_SOFT" '    - Unchecked checklist items: requirements.md: CHK003 (recommended: yes)' \
   '- [x] 3 Plan — merged with 4; assumptions needing you: 2; constitution: II, IV; blockers: yes; size trigger: service'
@@ -1312,7 +1368,7 @@ check fixes-stop 0
 # /feat 7 medium and large: 7a-7d, then 7e
 
 medium7() {
-  review_case "$1" feat "$2" '7 Code review'
+  review_case "$1" feat "$2" '7 Code review' "${@:3}"
   put code-reviewer/7a-plain 7-7a
   put code-reviewer/7b-sec 7-7b
   put code-reviewer/7c-zero 7-7c
@@ -1331,6 +1387,9 @@ CALL0=(feat "$sf")
 refused_all 'B2 need an answer' 'answer: approved (user: "go")'
 run feat "$sf" "${CALL[@]}" 'answer: approved (user: "drop the flag too")' 'answer: fix B2 (user: "drop the flag too")'
 check feat7-medium-approved 0
+
+medium7 "feat 7 medium: a skipped finding of gate 4 reaches the 7e spawn" medium "$SKIP_A1" "$SKIP_A1_SUB"
+check feat7e-rejected 0
 
 medium7 "feat 7 medium: a 7a-7d report edited before the 7e call" medium
 printf 'edited\n' >>"$rd/7-7a.md"
@@ -1820,7 +1879,11 @@ full_ans 'answer: approved (user: "go on")'
 full_go implementer/story-pass
 full_go implementer/story-clean
 # AC 5.5: the next reviewer spawns carry the user's words on their rejected: lines
-[ "$(printf '%s\n' "$out" | grep -cxF "  - D5 spec.md: FR-001 — $leave_words")" = 2 ] || fail "the leave words are not on both rejected: lists"
+leave_n=0
+while IFS= read -r p; do
+  if grep -qxF "  - D5 spec.md: FR-001 — $leave_words" "$p"; then leave_n=$((leave_n + 1)); fi
+done < <(printf '%s\n' "$raw" | sed -n 's/^  inputs: //p')
+[ "$leave_n" = 2 ] || fail "the leave words are not on both rejected: lists"
 full_go code-reviewer/7a+7b-gate code-reviewer/7c+7d+7e-cuts
 full_ans 'answer: picked B1, C1 (user: "B1 and C1")' 'answer: fix B2 (user: "drop the flag")'
 full_go implementer/fix-pass

@@ -7,6 +7,5 @@ spawn: feat-shipper
   effort: medium
   report: @TOP@/specs/012-x/reports/8-ship-2.md
   continue: fresh
-  not verified items: none
   ship script: @SKILL@/scripts/ship.sh
 boundary:	8	@TOP@/specs/012-x/reports/8-ship-2.md

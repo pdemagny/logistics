@@ -8,6 +8,4 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test.md
   continue: fresh
   cycle: after review fixes
-  not verified items: none
-  approved commands: none
 boundary:	3	@TOP@/specs/x/reports/3-test.md

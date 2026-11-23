@@ -66,8 +66,8 @@ rules this skill follows. The values it refers to are below.
   gate; tasker: tasks.md; implementer: code.
 - *Agents that may be continued*: specifier, planner, tasker. Implementer:
   always a fresh spawn, one per story and one for fixes.
-- *Reviewer context*: the rejected findings (the spawn block's `rejected:`
-  lines) and the brief's "Alternatives rejected".
+- *Reviewer context*: the rejected findings (in the spawn's `inputs:`
+  file) and the brief's "Alternatives rejected".
 - *Phases that can't be skipped*: none.
 - *Tracker script*: `<this skill's base dir>/scripts/tracker.sh`.
 - *Board-check step*: Setup step 5.
@@ -260,8 +260,8 @@ every other finding with its `rec` (on large too, even when none is
 `user`), per the harness (Review findings, "fix" read as "apply"; its `S`
 notice does not apply here). Spec changes asked at this gate (an
 overturned assumption, a reworded requirement) are `changed`: give them,
-quoted, to the planner amend `step.sh` prints, with the picked findings
-on its `apply:` lines. A change that rewrites stories is "back to 2".
+quoted, to the planner amend `step.sh` prints; the picked findings are in
+its `inputs:` file. A change that rewrites stories is "back to 2".
 
 ## 5. Tasks
 
@@ -279,7 +279,7 @@ moment to change direction: raise any hesitation you noticed.
 ## 6. Implement
 
 `step.sh` prints one implementer per story, in tasks.md order, with its
-`who`, `story` and `story.sh` output (setup and foundational tasks come
+`who`, `story` and its `inputs:` file (the `story.sh` output; setup and foundational tasks come
 with the first story, polish with the last). Add the checklist answer from
 phases 2–5. Not in parallel: nothing is committed before phase 8, so a
 separate worktree would miss the spec and earlier stories.

@@ -8,7 +8,6 @@ spawn: feat-design-reviewer
   effort: medium
   report: @TOP@/specs/x/reports/4-4a.md
   continue: fresh
-  rejected: none
 spawn: feat-design-reviewer
   row: 4b
   mode: review
@@ -17,7 +16,6 @@ spawn: feat-design-reviewer
   effort: medium
   report: @TOP@/specs/x/reports/4-4b.md
   continue: fresh
-  rejected: none
 spawn: feat-design-reviewer
   row: 4c
   mode: review
@@ -26,5 +24,4 @@ spawn: feat-design-reviewer
   effort: medium
   report: @TOP@/specs/x/reports/4-4c.md
   continue: fresh
-  rejected: none
 boundary:	4	@TOP@/specs/x/reports/4-4a.md	@TOP@/specs/x/reports/4-4b.md	@TOP@/specs/x/reports/4-4c.md	snapshot=@SNAP@

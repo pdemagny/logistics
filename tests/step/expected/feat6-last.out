@@ -14,7 +14,6 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7a.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
 spawn: feat-code-reviewer
   row: 7b
   mode: review
@@ -24,8 +23,6 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7b.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
-  accepted sec: none
 spawn: feat-code-reviewer
   row: 7c
   mode: review
@@ -35,7 +32,6 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7c.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
 spawn: feat-code-reviewer
   row: 7d
   mode: review
@@ -45,6 +41,5 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7d.md
   continue: fresh
   diff: git diff @SHA@
-  rejected: none
 boundary:	7	@TOP@/specs/x/reports/7-7a.md	@TOP@/specs/x/reports/7-7b.md	@TOP@/specs/x/reports/7-7c.md	@TOP@/specs/x/reports/7-7d.md	snapshot=@SNAP@
 answer call:	6	@TOP@/specs/x/reports/6-US2.md	sum=6-US2.md:@SUM@

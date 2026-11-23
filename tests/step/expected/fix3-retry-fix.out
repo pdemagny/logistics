@@ -8,8 +8,6 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test-2.md
   continue: fresh
   cycle: retry
-  not verified items:
-  - n/a → live run → no credentials
-  approved commands: none
+  inputs: @TOP@/specs/x/reports/3-test-2.in.md
 boundary:	3	@TOP@/specs/x/reports/3-test-2.md
 answer call:	2	@TOP@/specs/x/reports/2-fix.md	sum=2-fix.md:@SUM@

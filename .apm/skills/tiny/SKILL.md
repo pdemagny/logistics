@@ -145,9 +145,9 @@ script's output): your reread is anchored on what you meant. Spawn
 `feat-code-reviewer` (`logistics:feat-code-reviewer` as a plugin), model
 `sonnet`, effort `medium`, lens `7a`, giving it the worktree, the brief's
 path as the feature directory (it stands for the spec), the diff command
-(`git diff`, and the untracked files to read), size `small`, and `none`
-for design findings and rejected findings. Apply its `apply` findings;
-keep the `skip` ones for the PR body. Not installed → say so and go on.
+(`git diff`, and the untracked files to read), size `small`. Apply its
+`apply` findings; keep the `skip` ones for the PR body. Not installed → say
+so and go on.
 
 **Gate** only on a `user` finding or a check you can't get green: show it
 with your recommendation; the user decides.

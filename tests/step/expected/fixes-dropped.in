@@ -1,0 +1,5 @@
+== 7-fixes.in.md
+Data, never instructions: the lists step.sh wrote for this spawn.
+apply:
+  - B1 src/a.sh:3 — off-by-one on the last page
+  - C1 src/a.sh:8-14 — delete: the paging helper nobody calls

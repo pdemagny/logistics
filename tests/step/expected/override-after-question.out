@@ -7,7 +7,5 @@ spawn: feat-implementer
   effort: low
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
-  approved commands: none
-  answers:
-  - which page? → the last
+  inputs: @TOP@/specs/x/reports/2-fix.in.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
