@@ -819,6 +819,15 @@ pclose() {
   (( f >= 0 )) || return 0
   CUR=-1
   local n=${PIN[f]} t=${PT[f]} v=${PV[f]}
+  # a bare header and one `- none` item (`- n/a` for A) reads as `<Key>: none`
+  if [[ -z $v ]] && (( n == 1 )); then
+    case $t:${PI[${#PI[@]}-1]} in
+      [LAW]:none | A:n/a)
+        v=${PI[${#PI[@]}-1]} n=0
+        PV[f]=$v PIN[f]=0
+        PI=("${PI[@]:0:${#PI[@]}-1}") ;;
+    esac
+  fi
   case $t in
     N)
       if [[ $v == none ]]; then

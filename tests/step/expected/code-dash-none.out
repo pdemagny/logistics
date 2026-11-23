@@ -1,0 +1,13 @@
+soft
+base: same
+counts: 0 findings, 0 to apply, 0 skipped
+spawn: feat-shipper
+  row: 8
+  mode: ship
+  model: haiku
+  effort: low
+  report: @TOP@/specs/x/reports/8-ship.md
+  continue: fresh
+  ship script: @SKILL@/scripts/ship.sh
+boundary:	8	@TOP@/specs/x/reports/8-ship.md
+answer call:	7	@TOP@/specs/x/reports/7-7a+7b.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7a+7b.md:@SUM@	sum=7-7c+7d+7e.md:@SUM@

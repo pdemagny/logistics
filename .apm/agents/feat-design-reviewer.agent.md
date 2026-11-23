@@ -147,7 +147,8 @@ changing" is a fine result, written `Findings: none`; with 4c, the
 paraphrase and its comparison with the brief are always reported. Each
 list item is one `- ` line at column 0, never wrapped; write `none` for an
 empty field or section. A list field reads `<Key>: none`, or `<Key>:` alone
-followed by its items. Each finding starts with its tag (`[sec]`, `[cost]`
+followed by its items. An empty section is `<Key>: none` on its header
+line, never a `- none` item under it. Each finding starts with its tag (`[sec]`, `[cost]`
 or `[design]`) right after `- `, then its title, the `at:` and `fix:`
 labels, and its `rec` last. `<section or line>` is the section heading as
 written in the artifact, or a line number. `<rec>` is `apply`, `skip

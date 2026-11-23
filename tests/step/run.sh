@@ -1212,6 +1212,14 @@ check feat4-small-batch 0
 put design-reviewer/4a+4b+4c-zero 4-4a+4b+4c
 run feat "$sf" "${CALL[@]}"
 check merge-zero 0
+zero_out="$out"
+
+# a bare `Findings:` header with one `- none` item reads as `Findings: none`
+review_case "dash-none at /feat 4: no finding, the same as merge-zero" feat small '4 Design review' "$P2_SOFT" "$P2_NONE" "$P3_FACTS"
+put design-reviewer/4a+4b+4c-dash-none 4-4a+4b+4c
+run feat "$sf" "${CALL[@]}"
+[ "$out" = "$zero_out" ] || fail "design dash-none: stdout differs from merge-zero"
+check design-dash-none 0
 
 review_case "design rules 2 and 5, two tags on one spot, [sec] apply and skip" feat small '4 Design review' "$P2_SOFT" "$P2_NONE" "$P3_FACTS"
 put design-reviewer/4a+4b+4c-rules 4-4a+4b+4c
@@ -1336,6 +1344,20 @@ call_line 'answer call'
 S log '    - override: hard — the user wants to read the diff first'
 run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ship it")'
 check override-after-review 0
+
+# lenses written as a bare header and one `- none` item: no finding, soft (#73)
+review_case "dash-none at /feat 7: the zero reports, for comparison" feat small '7 Code review'
+put code-reviewer/7a+7b-zero 7-7a+7b
+put code-reviewer/7c+7d+7e-zero 7-7c+7d+7e
+run feat "$sf" "${CALL[@]}"
+zero_out="$out"
+review_case "dash-none at /feat 7: Bugs, Spec and Security read none" feat small '7 Code review'
+put code-reviewer/7a+7b-dash-none 7-7a+7b
+put code-reviewer/7c+7d+7e-zero 7-7c+7d+7e
+run feat "$sf" "${CALL[@]}"
+[ "$out" = "$zero_out" ] || fail "code dash-none: stdout differs from the zero reports"
+case $out in *finding:* | hard*) fail "code dash-none: a finding or a hard gate" ;; esac
+check code-dash-none 0
 
 # /feat 7 small: the rows, the outcome, then review fixes and rule 1 drops
 
