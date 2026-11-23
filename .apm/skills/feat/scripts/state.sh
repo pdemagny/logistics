@@ -18,6 +18,7 @@
 #   state.sh report-path <state file> <key>         next free <dir>/reports/<key>[-<n>].md
 #   state.sh inputs <state file> <report path> <line>...  a spawn's lists, to <report path>.in.md
 #   state.sh snapshot <state file>                  12-hex token of the worktree's content
+#                                                   (reports/ and the state file left out)
 #   state.sh unchanged <state file> <token>         unchanged | changed + up to 10 paths
 #
 # A `--` right after the subcommand is dropped; no other option is parsed.
@@ -941,7 +942,8 @@ cmd_inputs() {
 }
 
 # snap_setup <state file>: TOP (the worktree's top level), SD (the snapshot
-# dir under its git dir), EX (the state file dir's reports/, relative to TOP)
+# dir under its git dir), EX (the state file dir's reports/, relative to TOP),
+# SX (the state file, relative to TOP)
 snap_setup() {
   local ad gd
   dir_of "$1"
@@ -951,6 +953,7 @@ snap_setup() {
   TOP=$(CDPATH='' cd -- "$TOP" && pwd -P)
   SD=$gd/logistics/snapshots
   if [[ $ad == "$TOP" ]]; then EX=reports/; else EX=${ad#"$TOP"/}/reports/; fi
+  SX=${EX%reports/}${1##*/}
   mkdir -p -- "$SD" 2>/dev/null || die "cannot create $SD"
 }
 
@@ -958,7 +961,8 @@ TMPS=()
 cleanup() { if (( ${#TMPS[@]} )); then command rm -f -- "${TMPS[@]}"; fi; }
 
 # manifest <out>: one NUL-terminated record per path `git status` lists
-# (changed tracked, untracked; ignored ones and EX left out), sorted bytewise,
+# (changed tracked, untracked; ignored ones, EX and SX left out: the state
+# file is the coordinator's and step.sh's to write mid-batch), sorted bytewise,
 # each `<path> TAB <blob id | deleted | dir | link:<target>>`. MT = its token.
 manifest() {
   local out=$1 st=$1.st rec p i k h paths=() values=() batch_idx=() batch_paths=() batch_hashes=()
@@ -967,7 +971,7 @@ manifest() {
     --ignore-submodules=all >"$st" 2>/dev/null || die "git status failed in $TOP"
   while IFS= read -r -d '' rec; do
     p=${rec:3}
-    [[ -n $p && $p != "$EX"* ]] || continue
+    [[ -n $p && $p != "$EX"* && $p != "$SX" ]] || continue
     i=${#paths[@]}
     paths+=("$p")
     if [[ -L $TOP/$p ]]; then

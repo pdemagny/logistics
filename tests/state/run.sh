@@ -792,10 +792,16 @@ printf 'x\n' >"$sn/c.txt"
 run unchanged "$sf" "$tok"
 expect_ok "$(printf '%s\n' changed '- b.txt' '- c.txt')"
 [ ! -e "$sn/.git/logistics/snapshots/$tok" ] || fail "manifest left behind"
+# the state file is left out: the coordinator logs to it mid-batch
 snap
-run log "$sf" '- [x] 7 Code review — written by a reviewer'
+run log "$sf" '- [x] tracker: #73 set to "In review"'
 run unchanged "$sf" "$tok"
-expect_ok "$(printf '%s\n' changed '- specs/x/feat-state.md')"
+expect_ok "unchanged"
+snap
+run set "$sf" Size large
+printf 'beside\n' >"$sn/d.txt"
+run unchanged "$sf" "$tok"
+expect_ok "$(printf '%s\n' changed '- d.txt')"
 snap
 printf 'odd\n' >"$sn/odd"$'\t'"name"
 run unchanged "$sf" "$tok"

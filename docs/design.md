@@ -73,7 +73,8 @@ Two other shapes were considered:
   agents.
 - **Read-only reviewers** get no Edit; their Write is for their report
   file only, by instruction, checked by `state.sh snapshot`/`unchanged`
-  around each batch (a change elsewhere is a hard gate); their Bash is for
+  around each batch (a change elsewhere, the state file aside, is a hard
+  gate); their Bash is for
   git and grep only, by instruction.
 - **`effort` in an inline skill's frontmatter** has no documented duration,
   so effort is set only on subagents.
