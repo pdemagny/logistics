@@ -9,4 +9,5 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
   inputs: @TOP@/specs/x/reports/1-assess.in.md
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	1	@TOP@/specs/x/reports/1-assess.md

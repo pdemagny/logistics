@@ -1,0 +1,5 @@
+kind: resume
+install: ok
+hook won't run: before_plan: mine.mine.plan → run it by hand: /mine-plan
+hook would branch or commit: after_implement: mine.mine.commit → run it by hand: /mine-commit
+hooks allowed: after_implement: mine.mine.docs

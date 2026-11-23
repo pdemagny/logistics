@@ -9,5 +9,6 @@ spawn: feat-implementer
   continue: fresh
   test report: @TOP@/specs/x/test.md
   still failing: the last item is still missing
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 answer call:	3	@TOP@/specs/x/reports/3-test.md	sum=3-test.md:@SUM@

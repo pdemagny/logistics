@@ -1,0 +1,12 @@
+kind: issue
+title: Save button crashes
+issue: #7
+github: yes
+author: MEMBER
+install: ok
+bug extension: 1.4.2
+board: off
+default: main
+fetch: ok
+hooks allowed: none
+slug: 7-save-button-crashes

@@ -77,6 +77,7 @@ spawn: feat-bug-assessor
   effort: low
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix small
 soft
@@ -90,6 +91,7 @@ spawn: feat-implementer
   effort: low
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test small
 soft
@@ -104,6 +106,7 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test.md
   continue: fresh
   cycle: first
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) small
 soft
@@ -199,6 +202,7 @@ spawn: feat-bug-assessor
   effort: medium
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix medium
 soft
@@ -212,6 +216,7 @@ spawn: feat-implementer
   effort: medium
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test medium
 soft
@@ -226,6 +231,7 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test.md
   continue: fresh
   cycle: first
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) medium
 soft
@@ -321,6 +327,7 @@ spawn: feat-bug-assessor
   effort: high
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix large
 soft
@@ -334,6 +341,7 @@ spawn: feat-implementer
   effort: high
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test large
 soft
@@ -348,6 +356,7 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/3-test.md
   continue: fresh
   cycle: first
+  trail script: @SKILL@/scripts/trail.sh
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) large
 soft

@@ -1,0 +1,8 @@
+kind: issue
+install: ok
+bug extension: 1.4.2
+board: off
+default: main
+fetch: ok
+hooks allowed: none
+stop: gh failed: HTTP 502: Bad Gateway

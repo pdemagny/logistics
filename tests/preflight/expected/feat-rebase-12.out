@@ -1,0 +1,4 @@
+kind: rebase
+rebase target: 12
+install: ok
+hooks allowed: none

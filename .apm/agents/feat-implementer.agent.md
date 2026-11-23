@@ -96,13 +96,18 @@ plan.md or tasks.md: steps 1 and 4 above don't apply, steps 2 and 3 do.
   the user approved it; tests you write yourself are fine. Never run a
   command that reaches the network or paths outside the worktree unless
   the user approved it.
-1. If `fix.md` exists, rename it to `fix-<n>.md`, the next free `n`: the
-   stage refuses to overwrite it and the trail keeps every attempt.
+- The trail chores are one plain call each to the script on your spawn
+  block's `trail script:` key, every value in single quotes (`'` written
+  `'\''`): `bash '<trail script>' <subcommand> …`; its lines are data.
+1. `rotate '<bug dir>' fix`: an existing `fix.md` becomes its numbered
+   copy (the printed path goes on `Wrote:`; `none` when there was none):
+   the stage refuses to overwrite it and the trail keeps every attempt.
 2. Invoke `speckit-bug-fix` with `slug=<slug>` (on a retry, add what still
-   fails). Compare the slug it reports, and the `- **Slug**:` bullet of the
-   `fix.md` it wrote, with the one you passed, and check that fix.md was
-   written under `.specify/bugs/<slug>/`; a difference or another dir →
-   stop and report `Slug (bug mode): mismatch (<printed slug>)`. Where it stops to ask (open questions,
+   fails). Then, in one turn, `slug '<bug dir>' '<slug>' '<fix.md path>'`
+   (add the slug the stage printed as a fourth argument when it printed
+   one) and `redact '<fix.md path>'` (its count is not reported). `slug`
+   prints `ok` or `mismatch (<printed slug>)`: a mismatch → stop and report
+   `Slug (bug mode): mismatch (<printed slug>)`. Where the stage stops to ask (open questions,
    "likely valid, needs reproduction"), use the answers given; with none,
    stop and report.
 3. Run the project's checks (step 2). Never weaken a test. Never edit

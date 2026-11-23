@@ -1,0 +1,9 @@
+kind: brief
+brief: @TOP@/specs/briefs/bare.md
+brief in checkout: no
+title: Bare
+map: none
+issue: none
+behaviour: 0 lines
+acceptance: 1 lines
+stop: brief lacks size, short name, behaviour

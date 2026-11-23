@@ -25,8 +25,11 @@ holds a size table or a gate table: `step.sh` applies them.
   [`step.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/step.sh),
   which checks the agents' reports, decides the gate, logs it, runs the
   base check and prints the next spawn with its model and effort; the
-  coordinator writes the gate message and makes the spawn. Every call it
-  makes re-reads its whole context, so it stays thin on purpose.
+  coordinator writes the gate message and makes the spawn. Setup is two
+  calls to
+  [`preflight.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/preflight.sh)
+  around `EnterWorktree` (0 Setup). Every call it makes re-reads its whole
+  context, so it stays thin on purpose.
 - **Phase agents**: the `feat-*` subagents. Each does one job, can't talk to
   you, starts with no conversation history, and gets what it needs (paths,
   size, conventions, allowed hooks, rejected findings) in its prompt.
@@ -219,17 +222,32 @@ brief. Detection rules and map format adapted from the scope check in
 `spec-driven-development` (MIT).
 
 ### 0 Setup (coordinator)
-Checks the argument is a brief, a path or a short name (`[a-z0-9-]`): a name is looked up
-as `specs/briefs/<name>.md` in this checkout, then in every worktree `git
-worktree list` names; one match is used and named, several are put to you,
-none stops the run with every path searched. It then reads `CLAUDE.md`/`AGENTS.md` and project
-memory (they override the skill), checks Spec Kit and the agents, and reads
-`.specify/extensions.yml` (enabled entries only).
+One call to `preflight.sh feat '<argument>'` does what setup can know before
+the worktree exists, and prints `key: value` lines the coordinator reads as
+data (exit 0 go on, 1 stop with a `stop:` line, 2 could not run):
+
+- It classifies the argument: a brief (a path or a short name,
+  `[a-z0-9-]`), `resume`, `rebase [PR]`, empty, or a kind `/feat` refuses
+  (an issue or an idea: `/brief`; a bug: `/fix`), printed with the pointer
+  to the right command.
+- A short name is looked up as `specs/briefs/<name>.md` in this checkout,
+  then in every other worktree; one match is used and named, several are
+  put to you, none stops the run with every path searched. The brief's
+  fields are printed (size, short name, map, issue; Behaviour and
+  Acceptance are counted, not printed); `tiny` and `huge` stop the run.
+- It checks Spec Kit and the agents, runs the board check with [board
+  tracking](#board-tracking), fetches `origin/<default>` (a failed fetch
+  stops the run), and reads that branch's `.specify/extensions.yml` as data
+  (a file it can't parse stops the run: it may hide a hook that commits).
+
+The coordinator then reads `CLAUDE.md`/`AGENTS.md` and project memory (they
+override the skill).
 
 - The specifier, planner and tasker can't run hooks (`Skill` is denied), so
   every hook under `before_`/`after_` `specify`, `plan`, `tasks` or `analyze`,
-  git ones included, won't run; an `implement` hook that would create a
-  branch or commit is skipped unless you allow it.
+  git ones included, won't run; an `implement` hook that would branch or
+  commit (by its names: the `git` extension, or a word such as `commit`,
+  `push`, `merge`, `tag` or `pr`) is skipped unless you allow it.
 - If any is found you get one hard gate before anything runs, listing each as
   `<key>: <extension>.<command> → run it by hand: /<command>` (dots as
   hyphens; a hook with no `command` is shown by its extension only) in two
@@ -238,15 +256,15 @@ memory (they override the skill), checks Spec Kit and the agents, and reads
   stop now; there is no "run it anyway" for the first section. On `rebase`
   only the `implement` part applies.
 
-With [board tracking](#board-tracking) it
-runs the board check and moves the issue to In progress.
+With board tracking it then moves the issue to In progress.
 
 ### 2 Specify (`feat-specifier`)
-The coordinator fetches `origin/<default>` first, so the run starts from
-the remote head rather than a stale local copy, then creates branch
-`<short-name>` (worktree when possible,
-renamed if EnterWorktree picked another name) and enters it, so every agent
-starts there. The spec dir is `specs/<short-name>/` until phase 8 numbers it. The specifier runs `speckit-specify` from the brief and
+Setup fetched `origin/<default>`, so the run starts from the remote head
+rather than a stale local copy. The coordinator enters a worktree
+(`EnterWorktree`), so every agent starts there, then makes one Bash call:
+`preflight.sh feat worktree` renames the branch to `<short-name>` and
+checks `.logistics.yml` is in the worktree, chained with `state.sh init`
+and the first `step.sh` call. The spec dir is `specs/<short-name>/` until phase 8 numbers it. The specifier runs `speckit-specify` from the brief and
 reports stories, requirements, open `[NEEDS CLARIFICATION]` markers with
 recommended answers, assumptions and unchecked checklist items. Before
 spawning it, the coordinator copies the brief into `feat-state.md`
@@ -368,8 +386,13 @@ instead of redoing the tasks.
 With [board tracking](#board-tracking) the coordinator first moves the issue
 to In review. `step.sh` then makes the uncommitted work reviewable (`git add -N` on new
 files, `git diff` against `git merge-base origin/<default> HEAD`; a
-`...HEAD` diff would be empty) and prints the reviewers' spawns with their
-lenses:
+`...HEAD` diff would be empty), writes that diff to
+`<artifact dir>/reports/review.diff` (never committed, rewritten at each
+review, not written when the diff is empty), and prints the reviewers'
+spawns with their lenses and the file under `diff file:`. Each reviewer
+reads the file instead of running git to find the diff (`/tiny`'s
+reviewer, with no file, runs the `diff:` command), and still reads the
+tree to verify its findings:
 - **7a Correctness, spec, standards**: three separate passes. Standards:
   the project's documented rules (hard) and a Fowler smell baseline
   (judgement calls). Spec: missing requirements, scope creep, wrong
@@ -629,12 +652,26 @@ reviewer groups are `sizes.json`'s `fix` part.
   and `step.sh`), never reads
   code, report files or runs checks; it
   quotes a line of assessment.md, fix.md or test.md only when you must
-  decide on it.
+  decide on it. Setup is two `preflight.sh` calls around `EnterWorktree`:
+  the first classifies the argument, checks the install and the bug
+  extension, runs the board check, fetches the default branch, reads the
+  hooks as data, reads an issue's title and its author's association, and
+  builds a slug unused by any bug dir, local branch or remote branch
+  `fix-<slug>`; the second renames the branch to `fix-<slug>`, chained
+  with `state.sh init` and the first `step.sh` call. The model still
+  judges a refactor, a backport, several bugs in one report, the `/tiny`
+  offer and a symptom's slug words.
 - **`feat-bug-assessor`**: runs `speckit-bug-assess` (phase 1) or
   `speckit-bug-test` (phase 3); never edits source. Every test is a fresh
-  spawn, never the agent that wrote the fix.
-- **`feat-implementer`** in bug mode runs `speckit-bug-fix` (phase 2); in
-  fix mode it applies the review fixes (phase 4).
+  spawn, never the agent that wrote the fix. Its chores are calls to
+  [`trail.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/trail.sh):
+  `rotate` numbers an earlier report, `sections` checks the required
+  parts, `slug` compares the slugs, and `redact` replaces every
+  secret-looking value in the report with `<redacted>` by
+  `secret-scan.sh`'s own rules (a key's value whatever its length).
+- **`feat-implementer`** in bug mode runs `speckit-bug-fix` (phase 2),
+  with `trail.sh`'s `rotate`, `slug` and `redact` on `fix.md`; in fix mode
+  it applies the review fixes (phase 4).
 - **`feat-code-reviewer`**, unchanged, with a subset of its lenses.
 - **`feat-shipper`** in fix mode commits `fix(<scope>)` with the
   `.specify/bugs/<slug>/` trail and opens the PR through the same two

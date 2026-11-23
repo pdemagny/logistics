@@ -1,0 +1,2 @@
+kind: empty
+usage: /feat <brief path or short name> | resume | rebase [PR]

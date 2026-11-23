@@ -1,0 +1,5 @@
+kind: rebase
+rebase target: none
+install: ok
+hook would branch or commit: after_implement: mine.mine.commit → run it by hand: /mine-commit
+hooks allowed: after_implement: mine.mine.docs

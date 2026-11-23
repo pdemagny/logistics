@@ -1,0 +1,3 @@
+kind: brief
+pointer: /feat specs/briefs/x.md
+stop: a brief is built by /feat, not /fix

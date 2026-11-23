@@ -15,7 +15,7 @@ go = "1.27.1"                   # Hugo fetches its theme as a Go module
 d2 = "0.9.0"                    # renders the diagrams in docs/img (`mise run diagrams`)
 
 [tasks.lint]
-description = "shellcheck the shell scripts and their tests, actionlint the workflows, grep the skills for the state-file wording state.sh replaced, grep both SKILL.md files for a size table or a gate table, both and harness.md for merge rules 2-6 and the base and repair check prose, harness.md and move.md for the Harness values step.sh replaced (step.sh applies those rules now), compile the Python test stub and measure.py (checked against Python 3.11), check sizes.tsv and the size tables' copies match sizes.json, validate the Claude Code plugin, check every agent denies Artifact and EnterWorktree"
+description = "shellcheck the shell scripts (preflight.sh and trail.sh included) and their tests (tests/preflight and tests/trail included), actionlint the workflows, grep the skills for the state-file wording state.sh replaced, grep both SKILL.md files for a size table or a gate table, both and harness.md for merge rules 2-6 and the base and repair check prose, harness.md and move.md for the Harness values step.sh replaced (step.sh applies those rules now), both SKILL.md files for the setup prose preflight.sh replaced, the bug assessor and the implementer for the rename, slug and redaction prose trail.sh replaced, compile the Python test stub and measure.py (checked against Python 3.11), check sizes.tsv and the size tables' copies match sizes.json, validate the Claude Code plugin, check every agent denies Artifact and EnterWorktree"
 run = [
   "shellcheck install.sh",
   "shellcheck .apm/skills/feat/scripts/*.sh",
@@ -26,6 +26,8 @@ run = [
   "shellcheck tests/state/run.sh tests/state/bin/gh",
   "shellcheck tests/step/run.sh",
   "shellcheck tests/ship/run.sh tests/ship/bin/gh",
+  "shellcheck tests/preflight/run.sh tests/preflight/bin/gh",
+  "shellcheck tests/trail/run.sh",
   "shellcheck tests/sizes/run.sh",
   "shellcheck tests/measure/run.sh tests/measure/bin/*",
   "actionlint",
@@ -40,6 +42,8 @@ run = [
   "! grep -Eiq 'reviewers disagree|same spot|no valid recommendation' .apm/skills/feat/SKILL.md .apm/skills/fix/SKILL.md .apm/skills/feat/references/harness.md",
   "! grep -Eq 'merge-base --is-ancestor|refs/logistics/pre-move|logistics-wip:' .apm/skills/feat/SKILL.md .apm/skills/fix/SKILL.md .apm/skills/feat/references/harness.md",
   "! grep -Eiq 'review phase|size triggers|logged gate commands|base-check boundaries|report keys|resume queries' .apm/skills/feat/references/harness.md .apm/skills/feat/references/move.md",
+  "! grep -Eq 'worktree list --porcelain|author_association|ls-remote --heads|git branch -m|enabled: false' .apm/skills/feat/SKILL.md .apm/skills/fix/SKILL.md",
+  "! grep -Eq 'gh\\[opsur\\]_|xox\\[bp\\]-|github_pa\\[t\\]_|next free .n.|backticks and a trailing note' .apm/agents/feat-bug-assessor.agent.md .apm/agents/feat-implementer.agent.md",
   "test \"$(wc -l < .apm/skills/tiny/SKILL.md)\" -le 200 || { echo '/tiny is over 200 lines: keep it tiny'; exit 1; }",
   '''bad=; for f in .apm/agents/*.agent.md; do l=$(grep -m1 "^disallowedTools:" "$f" | tr "," " "); for t in Artifact EnterWorktree; do case " $l " in *" $t "*) ;; *) echo "$f: disallowedTools lacks $t"; bad=1;; esac; done; done; test -z "$bad"''',
 ]
@@ -67,6 +71,8 @@ test -f .claude/skills/feat/scripts/story.sh
 test -f .claude/skills/feat/scripts/state.sh
 test -f .claude/skills/feat/scripts/step.sh
 test -f .claude/skills/feat/scripts/ship.sh
+test -f .claude/skills/feat/scripts/preflight.sh
+test -f .claude/skills/feat/scripts/trail.sh
 test -f .claude/skills/feat/scripts/measure.py
 test -f .claude/skills/feat/sizes.json
 test -f .claude/skills/feat/sizes.tsv
@@ -117,6 +123,14 @@ run = "bash tests/sizes/run.sh"
 [tasks."test:ship"]
 description = "Run the ship script's offline tests (a template repo and bare origin copied per case, stub gh, golden outputs)"
 run = "bash tests/ship/run.sh"
+
+[tasks."test:preflight"]
+description = "Run the preflight script's offline tests (a template repo and bare origin copied per case, a scratch install, stub gh and tracker, golden outputs)"
+run = "bash tests/preflight/run.sh"
+
+[tasks."test:trail"]
+description = "Run the trail script's offline tests (throwaway bug dirs, fixtures, golden outputs, a scratch repo for the secret scan)"
+run = "bash tests/trail/run.sh"
 
 [tasks.docs]
 description = "Build the documentation website (README.md and docs/, see hugo.toml) into public/"

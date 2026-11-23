@@ -1,0 +1,4 @@
+kind: rebase
+rebase target: none
+install: ok
+hooks allowed: none

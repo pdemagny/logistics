@@ -1,0 +1,7 @@
+kind: brief
+brief: @TOP@/specs/briefs/t.md
+brief in checkout: yes
+title: T
+pointer: /tiny @TOP@/specs/briefs/t.md
+pointer: /brief @TOP@/specs/briefs/t.md
+stop: the brief is tiny: /tiny makes it, or /brief grows it into a full brief

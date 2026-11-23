@@ -1,0 +1,16 @@
+kind: brief
+brief: @TOP@/specs/briefs/x.md
+brief in checkout: yes
+title: Do x
+size: medium
+size note: ~10 tasks, one script
+short name: x
+map: none
+issue: none
+behaviour: 2 lines
+acceptance: 2 lines
+install: ok
+board: off
+default: main
+fetch: ok
+stop: origin/main:.specify/extensions.yml can't be read as data (line 4); it may hide a hook that commits

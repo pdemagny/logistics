@@ -1,0 +1,5 @@
+kind: brief
+pointer: /brief
+searched: @TOP@/specs/briefs/nope.md
+searched: @C@/wt2/specs/briefs/nope.md
+stop: no brief named nope in this checkout or its worktrees

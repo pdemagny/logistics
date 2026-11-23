@@ -1415,6 +1415,17 @@ call_line 'answer call'
 run feat "$sf" "${CALL[@]}" 'answer: stop (user: "later")'
 check fixes-stop 0
 
+# diff_same <what>: reports/review.diff holds exactly `git diff <base>`
+diff_same() {
+  local base
+  base="$(git -C "$top" merge-base origin/main HEAD)"
+  [ -f "$rd/review.diff" ] && [ ! -L "$rd/review.diff" ] || fail "$1: no review.diff"
+  git -C "$top" diff "$base" >"$work/want.diff"
+  [ -s "$work/want.diff" ] || fail "$1: the case's diff is empty"
+  cmp -s "$work/want.diff" "$rd/review.diff" || fail "$1: review.diff differs from git diff <base>"
+  printf '%s\n' "$out" | grep -qx "  diff file: @TOP@/specs/x/reports/review.diff" || fail "$1: no diff file: line"
+}
+
 # /feat 7 medium and large: 7a-7d, then 7e
 
 medium7() {
@@ -1423,6 +1434,8 @@ medium7() {
   put code-reviewer/7b-sec 7-7b
   put code-reviewer/7c-zero 7-7c
   put code-reviewer/7d-zero 7-7d
+  # the 7e call writes the review diff itself (a resumed 7e may have none)
+  command rm -f "$rd/review.diff"
   run feat "$sf" "${CALL[@]}"
   call_line boundary
   put code-reviewer/7e-zero 7-7e
@@ -1430,6 +1443,7 @@ medium7() {
 
 medium7 "feat 7 medium: 7e after 7a-7d, the gate, the answer" medium
 check feat7-medium-first 0
+diff_same "7e names the same file and writes it"
 run feat "$sf" "${CALL[@]}"
 check feat7-medium-gate 0
 call_line 'answer call'
@@ -1767,6 +1781,37 @@ mkdir -p "$top/junk"
 for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25; do : >"$top/junk/f$i"; done
 run resume "$sf"
 check diff-many 0
+
+diff_case "diff-file: the review boundary writes reports/review.diff"
+run resume "$sf"
+check diff-file 0
+diff_same "first boundary"
+[ "$(printf '%s\n' "$out" | grep -c '^  diff file: ')" = "$(printf '%s\n' "$out" | grep -c '^spawn: feat-code-reviewer')" ] || fail "a reviewer block lacks diff file:"
+git -C "$top" check-ignore -q "$rd/review.diff" || fail "review.diff is not ignored by git"
+git -C "$top" status --porcelain --untracked-files=all | grep -q 'review\.diff' && fail "review.diff shows in git status"
+snap1="$(bash "$skill/scripts/state.sh" snapshot "$sf")"
+printf 'stale\n' >>"$rd/review.diff"
+snap2="$(bash "$skill/scripts/state.sh" snapshot "$sf")"
+[ "$snap1" = "$snap2" ] || fail "review.diff is part of state.sh snapshot"
+printf 'echo c\n' >>"$top/src/a.sh"
+run resume "$sf"
+[ "$rc" = 0 ] || fail "second boundary: exit $rc"
+diff_same "a later boundary rewrites it"
+for t in "$rd"/.review.diff.*; do [ ! -e "$t" ] || fail "a temp file was left in reports/: $t"; done
+
+diff_case "diff-file-empty: an empty diff writes no review.diff"
+git -C "$top" checkout -q -- src/a.sh
+run resume "$sf"
+[ "$rc" = 0 ] || fail "exit $rc"
+printf '%s\n' "$out" | grep -q '^spawn: ' && fail "a reviewer was spawned on an empty diff"
+[ ! -e "$rd/review.diff" ] || fail "review.diff written for an empty diff"
+
+diff_case "diff-file-symlink: a symlink at reports/review.diff is an error"
+ln -s "$work/elsewhere.diff" "$rd/review.diff"
+run resume "$sf"
+one_line 1 'step: error: review diff is a symlink: @TOP@/specs/x/reports/review.diff'
+[ ! -e "$work/elsewhere.diff" ] || fail "the diff was written through the symlink"
+[ -L "$rd/review.diff" ] || fail "the symlink was replaced"
 
 new_case "ship conflict after a renumber: the move, then the ship again at the new path" feat
 S set 'Current phase' 'done (shipping)'

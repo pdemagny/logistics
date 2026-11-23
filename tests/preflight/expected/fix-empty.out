@@ -1,0 +1,2 @@
+kind: empty
+usage: /fix #N | <issue URL> | "<symptom>" | resume | rebase [PR]
