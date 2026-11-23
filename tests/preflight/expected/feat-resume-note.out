@@ -1,0 +1,4 @@
+kind: resume
+install: ok
+hooks allowed: none
+spawn note: to wait for each agent instead of running it in the background, add "env": {"CLAUDE_CODE_FORK_SUBAGENT": "0"} to <repo>/.claude/settings.local.json (docs/install.md): one model call less per agent spawn in interactive sessions; "1" keeps background spawns and hides this note

@@ -51,6 +51,8 @@ export GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.com
 export GIT_AUTHOR_DATE='2026-01-01T00:00:00Z' GIT_COMMITTER_DATE='2026-01-01T00:00:00Z'
 real_git="$(command -v git)"
 export PATH="$here/bin:$PATH"
+# The spawn note is off unless a case unsets or empties the variable.
+export CLAUDE_CODE_FORK_SUBAGENT=0
 
 FEAT_AGENTS="specifier planner design-reviewer tasker implementer code-reviewer shipper bug-assessor"
 
@@ -1113,6 +1115,43 @@ pre fix worktree 12-save on
 expect_exit 0
 expect_line 'branch: fix-12-save'
 no_gh
+ok
+
+# --- spawn note ----------------------------------------------------------------------
+
+new_case "spawn note: unset, feat resume"
+unset CLAUDE_CODE_FORK_SUBAGENT
+pre feat resume
+export CLAUDE_CODE_FORK_SUBAGENT=0
+expect_exit 0
+golden feat-resume-note
+ok
+
+new_case "spawn note: empty"
+CLAUDE_CODE_FORK_SUBAGENT='' pre feat resume
+expect_exit 0
+[[ "$out" == *$'\nspawn note: '* ]] || fail "no spawn note line"
+ok
+
+new_case "spawn note: 0, 1 and another value print none"
+for v in 0 1 yes; do
+  CLAUDE_CODE_FORK_SUBAGENT=$v pre feat resume
+  expect_exit 0
+  expect_no_key 'spawn note'
+done
+ok
+
+new_case "spawn note: a refused kind keeps it, stop last"
+CLAUDE_CODE_FORK_SUBAGENT='' pre feat 'some idea words'
+expect_exit 1
+[[ "$out" == *$'\nspawn note: '* ]] || fail "no spawn note line"
+[[ "$(printf '%s\n' "$out" | tail -n 1)" == 'stop: '* ]] || fail "last line is not stop:"
+ok
+
+new_case "spawn note: worktree mode prints none"
+CLAUDE_CODE_FORK_SUBAGENT='' pre fix worktree 12-save on
+expect_exit 0
+expect_no_key 'spawn note'
 ok
 
 if [ "$update" = 1 ] && [ "$updated" = 1 ]; then

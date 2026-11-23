@@ -42,7 +42,7 @@ default branch found, `git ls-remote` failing during the slug check.
 
 | Argument | `/feat` | `/fix` |
 |---|---|---|
-| empty | `kind: empty`, `usage:` line, exit 0, nothing else | same |
+| empty | `kind: empty`, `usage:` line, exit 0, nothing else but `spawn note:` | same |
 | exactly `resume` | `kind: resume` | same |
 | `rebase`, or `rebase` and one whitespace-free word | `kind: rebase`, `rebase target: <x or none>` | same |
 | `#N`, `owner/repo#N`, `https://github.com/<o>/<r>/issues/<N>` (parts checked below) | refused: `pointer: /brief <arg>` | `kind: issue`, `github: yes` |
@@ -58,8 +58,8 @@ these is not an issue of any repo: an `http(s)://` one is the other-URL kind
 (`github: no`, author `unknown`), anything else (`../x#1`) a symptom or idea.
 Only checked parts reach `gh api repos/<o>/<r>/issues/<N>`.
 
-A refused kind prints `kind:`, `pointer:` and `stop: …`, exits 1 and checks
-nothing else. The coordinator adds the plugin form of each command.
+A refused kind prints `kind:`, `pointer:`, `spawn note:` (when it applies) and
+`stop: …`, exits 1 and checks nothing else. The coordinator adds the plugin form of each command.
 
 ## Steps per kind (mode 1), in this order
 
@@ -103,6 +103,7 @@ hooks allowed: <key>: <extension>.<command>, … | none
 slug: <slug>                              (/fix issue, symptom)
 pointer: <command>                        (refusals, no match, tiny, huge)
 searched: <path>                          (no match: one per path)
+spawn note: <constant>                    (every kind; only when CLAUDE_CODE_FORK_SUBAGENT is unset or empty; never in worktree mode)
 stop: <why>                               (exit 1)
 ```
 
