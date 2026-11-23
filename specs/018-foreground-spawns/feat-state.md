@@ -4,7 +4,7 @@
 - Size: small
 - Agents: specifier adeb4124723fdf4e1, planner af3df4a7901504e55, tasker a5f838ec31cf3f0a0 (for SendMessage)
 - Current phase: done (shipping)
-- Conventions: Conventional commits type(scope): msg, one logical change per commit, never co-authored; PR body says Closes #87, never a commit message. In this worktree call /usr/bin/git directly, one plain command per call. rm/cp/mv are aliased -i: use command rm -f etc. Checks: mise run lint and mise run test:apm before committing, plus the offline tests (mise run test:preflight, test:measure, test:step, ...). Scripts stay Bash 3.2, no jq, no Python, shellcheck clean; measure.py is Python 3.11 stdlib only. CHANGELOG.md and release versions are generated, never edit by hand. New docs pages need title and weight front matter. Never name orleus anywhere.
+- Conventions: Conventional commits type(scope): msg, one logical change per commit, never co-authored; PR body says Closes #87, never a commit message. In this worktree call /usr/bin/git directly, one plain command per call. rm/cp/mv are aliased -i: use command rm -f etc. Checks: mise run lint and mise run test:apm before committing, plus the offline tests (mise run test:preflight, test:measure, test:step, ...). Scripts stay Bash 3.2, no jq, no Python, shellcheck clean; measure.py is Python 3.11 stdlib only. CHANGELOG.md and release versions are generated, never edit by hand. New docs pages need title and weight front matter. Never name private projects from outside this repo.
 - Allowed Spec Kit hooks: none
 - Map: none
 - Issue: #87
