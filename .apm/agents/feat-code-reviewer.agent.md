@@ -176,7 +176,7 @@ not built is reported as a Security line.
 ## Report file
 
 **Reformat mode**: when the prompt says `Mode: reformat`, with `From:
-<report>` and `Unparsable: <file>: line <n> (<Key>)` (or `<file>: no
+<report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or `<file>: no
 <Key>: line`): read that report, write it again in the format below to
 your new report path, fixing the named line and any other line that breaks
 the format, and change nothing else: no other file, no new finding, no
@@ -201,7 +201,8 @@ empty (`Accepted design findings built (7b): none` when no accepted `[sec]`
 finding was given). Each list item is one `- ` line at column 0, never
 wrapped; write `none` for an empty field or section. A list field reads
 `<Key>: none`, or `<Key>:` alone followed by its items. An empty section
-is `<Key>: none` on its header line, never a `- none` item under it. Each finding puts
+is `<Key>: none` on its header line, never a `- none` item under it, and
+a section with items has its header alone, never `none` above an item. Each finding puts
 its title first, then the `at:` and `fix:` labels, and its `rec` last.
 `at:` is `<file>:<line>` or `<file>:<first>-<last>` (the file alone when
 the finding is about the whole file). `<rec>` is `apply`, `skip (<why>)`

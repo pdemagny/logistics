@@ -37,7 +37,7 @@ given, as one plain command with no `$(…)`:
 6. Never commit.
 
 **Reformat mode**: when the prompt says `Mode: reformat`, with `From:
-<report>` and `Unparsable: <file>: line <n> (<Key>)` (or `<file>: no
+<report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or `<file>: no
 <Key>: line`): read that report, write it again in the format below to
 your new report path, fixing the named line and any other line that breaks
 the format, and change nothing else: no other file, no new finding, no
@@ -69,7 +69,8 @@ the path only. `Per story:` has one item per group of tasks.md, in its
 order: `setup/foundational`, each `US<n>`, `polish`, each with its task
 IDs and ranges (`T001–T012` or `T001-T012`), comma-separated, or `none`.
 `Analyze:` is for the last run. `Open findings:` lists each finding
-severity first. `Wrote:` lists tasks.md always, plus every other file you
+severity first; with none, `Open findings: none` is the whole field, never
+`none` above an item. `Total tasks:` is a bare integer. `Wrote:` lists tasks.md always, plus every other file you
 created or changed in this spawn (artifacts you fixed), and the report
 path, when one was given, one `- ` item per line.
 
@@ -83,7 +84,7 @@ Per story:
 MVP slice: <task IDs>
 Analyze: ran | not run (<error>; cross-checked by hand)
 Fixed: <MEDIUM/LOW findings fixed, "; "-separated, or none>
-Open findings: none
+Open findings:
 - CRITICAL | HIGH | MEDIUM | LOW — <finding> → <proposed fix> (<artifact>)
 Unchecked checklist items: none | open: <file>: <item>; …
 Skipped hooks: <hook → why, or "none">

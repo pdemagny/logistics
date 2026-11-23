@@ -8,5 +8,5 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/1-assess.md
-  unparsable: 1-assess.md: line 29 (Wrote)
+  unparsable: 1-assess.md: line 29 (Wrote) — not a "- " item at column 0
 boundary:	1	@TOP@/specs/x/reports/1-assess-2.md

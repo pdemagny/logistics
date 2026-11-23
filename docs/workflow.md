@@ -59,8 +59,10 @@ report's own path and artifact path are on the list. A failure fails the
 phase: a hard gate that shows the reason, with no automatic retry ("back to
 N" reruns it). A report that does not parse (a field outside its fixed
 values, a wrapped list item) gets one reformat turn: the same agent writes
-it again in its format, changing nothing else; a second slip is a hard
-gate naming the line.
+it again in its format, changing nothing else, told the line, its field
+and what is wrong with it in fixed words (an item under `none`, a count
+that is not a bare integer), never the line's text; a second slip is a
+hard gate naming the line.
 
 **Report files.** Before each spawn, `step.sh` gets the agent a path from
 `state.sh report-path`, `<artifact dir>/reports/<key>.md` (`3-test-2.md` on

@@ -8,5 +8,5 @@ spawn: feat-specifier
   report: @TOP@/specs/x/reports/2-specify-2.md
   continue: a1
   from: @TOP@/specs/x/reports/2-specify.md
-  unparsable: 2-specify.md: line 11 (Wrote)
+  unparsable: 2-specify.md: line 11 (Wrote) — not a "- " item at column 0
 boundary:	2	@TOP@/specs/x/reports/2-specify-2.md

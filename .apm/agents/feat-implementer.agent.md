@@ -183,9 +183,9 @@ its paths (the non-empty lines after `intent-to-add:` in `git log -1
 and the index are as before the move.
 
 **Reformat mode** (every mode): when the prompt says `Mode: reformat`,
-with `From: <report>` and `Unparsable: <file>: line <n> (<Key>)` (or
-`<file>: no <Key>: line`): read that report, write it again in the format
-below to your new report path, fixing the named line and any other line
+with `From: <report>` and `Unparsable: <file>: line <n> (<Key>) — <what
+is wrong>` (or `<file>: no <Key>: line`): read that report, write it again
+in the format below to your new report path, fixing the named line and any other line
 that breaks the format, and change nothing else: no other file, no new
 finding, no check run again. Its `Wrote:` lists the new report path in
 place of the old one. Hand back the digest.
@@ -208,7 +208,12 @@ Report file (every mode): the orchestrator may give a report path with its
 request (the spawn, or a message asking for a new report). Then, once the
 work is done, write the full report below (its `Wrote:` field listing
 that path) to that path with Write, as your last write, and hand back the
-digest, each field as its lines of the format: `Tasks not done`, the
+digest. Writing it is your job, never the orchestrator's (it never
+writes reports; a missing one fails the report check, which only a
+re-run from the phase's start clears). Never hand back before that Write
+has returned, never ask anyone to write it for you; if the Write fails,
+try once more, then quote its error on the digest's `Design problems:`
+line. The digest holds, each field as its lines of the format: `Tasks not done`, the
 failing `Checks` items (every `Checks` item in rebase mode), `Not
 verified`, `Design problems`; in fix mode also `Fixes (fix mode)`; in bug
 mode also `Status (bug mode)` when not `applied` and `Deviations (bug
@@ -222,8 +227,11 @@ back the full report.
 Report, and nothing else. Each list item is one `- ` line at column 0,
 never wrapped; write `none` for an empty field or section. A list field
 reads `<Key>: none` (`Tasks not done` and `Not verified` may read `n/a`),
-or `<Key>:` alone followed by its items; `Files changed:` holds the count
-of every file changed, its items only the notable ones. Write the fields
+or `<Key>:` alone followed by its items, never both: the block shows each
+list header alone above its item template, and `<Key>: none` is the whole
+field when there is no item. `Files changed:` holds the count of every
+file changed as a bare integer, nothing after it (count them; no `+`, no
+note), its items only the notable ones. Write the fields
 of your mode and leave out the other modes' (`(fix mode)`, `(bug mode)`,
 `(rebase mode)`); in bug and rebase mode `Tasks done` and `Tasks not done`
 say `n/a`, and in rebase mode the `Not verified` items read `- n/a →
@@ -235,27 +243,27 @@ mode) and the report path, when one was given, one `- ` item per line, or
 
 ```
 Tasks done: <IDs, or n/a>
-Tasks not done: none | n/a
+Tasks not done:
 - <ID> — <why>
-Checks: none
+Checks:
 - <command> → pass | fail (<first relevant error line>)
-Not verified: none
+Not verified:
 - <task or n/a> → <check> → <why>
 Design problems: none | <what the spec or plan gets wrong>
-Files changed: <count>
+Files changed: <integer>
 - <notable file — what changed>
 Fixes (fix mode): <id → applied | reverted (why)>; performance: <id: before → after (command)>
 Fix report (bug mode): <absolute fix.md path>
 Status (bug mode): applied | partial | not-applied
-Deviations (bug mode): none
+Deviations (bug mode):
 - <deviation from the assessment>
 Slug (bug mode): ok | mismatch (<printed slug>)
 Move (rebase mode): <old7> → <new7> | undone (<old7> → <new7>) | nothing to do | repaired
-Resolved alone (rebase mode): none
+Resolved alone (rebase mode):
 - <file> — <how> (an uncommitted check fix: <file> — check fix: <how>)
-Decided (rebase mode): none
+Decided (rebase mode):
 - <file> — <decision> (user: "<words>" | as recommended)
-Needs decision (rebase mode): none
+Needs decision (rebase mode):
 - <file> — run: <one line> — main: <one line> — rec: <one line>
 Skipped hooks: <hook → why, or "none">
 Wrote:

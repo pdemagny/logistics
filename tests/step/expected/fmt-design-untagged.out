@@ -9,5 +9,5 @@ spawn: feat-design-reviewer
   report: @TOP@/specs/x/reports/4-4a+4b+4c-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/4-4a+4b+4c.md
-  unparsable: 4-4a+4b+4c.md: line 5 (Findings)
+  unparsable: 4-4a+4b+4c.md: line 5 (Findings) — an item outside its format
 boundary:	4	@TOP@/specs/x/reports/4-4a+4b+4c-2.md	snapshot=@SNAP@

@@ -8,5 +8,5 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/6-US1-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/6-US1.md
-  unparsable: 6-US1.md: line 10 (Wrote)
+  unparsable: 6-US1.md: line 10 (Wrote) — not a "- " item at column 0
 boundary:	6	@TOP@/specs/x/reports/6-US1-2.md

@@ -3,4 +3,4 @@
 - Current phase: 7 Code review
 # /feat state: Test feature
 --
-- [x] 7 Code review [hard] — unparsable: 7-7a+7b-2.md: line 6 (Security (7b))
+- [x] 7 Code review [hard] — unparsable: 7-7a+7b-2.md: line 6 (Security (7b)) — not a "- " item at column 0

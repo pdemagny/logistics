@@ -8,5 +8,5 @@ spawn: feat-specifier
   report: @TOP@/specs/x/reports/2-specify-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/2-specify.md
-  unparsable: 2-specify.md: line 4 (Open markers)
+  unparsable: 2-specify.md: line 4 (Open markers) — the count differs from its items
 boundary:	2	@TOP@/specs/x/reports/2-specify-2.md

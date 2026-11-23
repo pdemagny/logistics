@@ -84,7 +84,8 @@ recommend, the item to drop.
 ## Report, and nothing else
 
 The paraphrase and the size are always reported. "Nothing worth changing"
-is a fine result for the findings.
+is a fine result for the findings, written `Findings: none`; with
+findings, the header stays alone above them, never `none` above an item.
 
 ```
 Paraphrase:

@@ -1,5 +1,5 @@
 hard:
-- unparsable: 7-7a+7b-2.md: line 2 (Bugs (7a))
+- unparsable: 7-7a+7b-2.md: line 2 (Bugs (7a)) — not a "- " item at column 0
 unparsable line: 7-7a+7b-2.md:   - off-by-one on the last page — at: src/a.sh:3 — fix: use <= — confidenc
 counts: 0 findings, 0 to apply, 0 skipped
 answer call:	7	@TOP@/specs/x/reports/7-7a+7b-2.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7a+7b-2.md:@SUM@	sum=7-7c+7d+7e.md:@SUM@

@@ -9,5 +9,5 @@ spawn: feat-code-reviewer
   report: @TOP@/specs/x/reports/7-7a+7b-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/7-7a+7b.md
-  unparsable: 7-7a+7b.md: line 6 (Security (7b))
+  unparsable: 7-7a+7b.md: line 6 (Security (7b)) — not a "- " item at column 0
 boundary:	7	@TOP@/specs/x/reports/7-7a+7b-2.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7c+7d+7e.md:@SUM@	snapshot=@SNAP@

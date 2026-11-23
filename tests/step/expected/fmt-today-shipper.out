@@ -8,5 +8,5 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/8-ship.md
-  unparsable: 8-ship.md: line 8 (Wrote)
+  unparsable: 8-ship.md: line 8 (Wrote) — text after a list header
 boundary:	8	@TOP@/specs/x/reports/8-ship-2.md

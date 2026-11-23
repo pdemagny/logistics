@@ -40,7 +40,7 @@ the accepted option), and add a requirement only if it changes behaviour.
 Report what changed on `Approach:`, one `; `-separated part per finding.
 
 **Reformat mode**: when the prompt says `Mode: reformat`, with `From:
-<report>` and `Unparsable: <file>: line <n> (<Key>)` (or `<file>: no
+<report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or `<file>: no
 <Key>: line`): read that report, write it again in the format below to
 your new report path, fixing the named line and any other line that breaks
 the format, and change nothing else: no other file, no new finding, no
@@ -69,13 +69,16 @@ path, write no report file and hand back the full report.
 
 Report, and nothing else. Each list item is one `- ` line at column 0,
 never wrapped; write `none` for an empty field or section. A list field
-reads `<Key>: none`, or `<Key>:` alone followed by its items. `Approach`
+reads `<Key>: none`, or `<Key>:` alone followed by its items, never both:
+the block shows each list header alone above its item template, and
+`<Key>: none` is the whole field when there is no item. `Approach`
 stays on one line. `Constitution check: pass` has no items;
 `Constitution check: violations` has one item per principle broken.
 `Assumptions` lists each decision beyond the spec, ending `needs user:
 yes` or `needs user: no`; the items are numbered by position (the first is
-1), so write no number. `Size trigger` names one kind (`service`,
-`permissions`, `exposure` or `dependency`), the others in its `<what>`.
+1), so write no number. `Size trigger` is `none` alone, nothing after it,
+or names one kind (`service`, `permissions`, `exposure` or `dependency`)
+followed by ` — <what>`, the others in its `<what>`.
 `Wrote:` lists plan.md always, plus every other file you created or
 changed in this spawn (design docs, spec.md in amend mode), and the report
 path, when one was given, one `- ` item per line.
@@ -85,14 +88,14 @@ Plan: <absolute path to plan.md> (+ other artifacts written)
 Approach: <two or three sentences>
 Touches:
 - <package or file>
-New dependencies or services: none
+New dependencies or services:
 - <dependency or service> — <reason>
 Constitution check: pass | violations
 - <principle> — <why>
-Assumptions: none
+Assumptions:
 - <what> — why: <why> — recommendation: <rec> — needs user: yes | no
 Blockers: none | <what stops the plan>
-Size trigger: none | service | permissions | exposure | dependency — <what>
+Size trigger: none | <service | permissions | exposure | dependency> — <what>
 Skipped hooks: <hook → why, or "none">
 Wrote:
 - <absolute path>
