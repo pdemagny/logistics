@@ -9,4 +9,6 @@ spawn: feat-implementer
   continue: fresh
   from: @TOP@/specs/x/reports/6-US1.md
   unparsable: 6-US1.md: line 7 (Not verified) — not a "- " item at column 0
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US1-2.md
 boundary:	6	@TOP@/specs/x/reports/6-US1-2.md

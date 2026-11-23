@@ -5,7 +5,9 @@ spawn: feat-specifier
   model: sonnet
   effort: medium
   report: @TOP@/specs/x/reports/2-specify-2.md
-  continue: fresh
+  continue: specifier
   from: @TOP@/specs/x/reports/2-specify.md
   unparsable: 2-specify.md: no Blocker: line
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify-2.md
 boundary:	2	@TOP@/specs/x/reports/2-specify-2.md

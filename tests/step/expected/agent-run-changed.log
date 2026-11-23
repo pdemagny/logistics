@@ -1,0 +1,7 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 2 Specify
+# /feat state: Test feature
+--
+- [!] another writer
+- [!] step: step: error: the state file changed since step.sh read it; call again

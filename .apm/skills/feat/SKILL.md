@@ -174,16 +174,17 @@ what you add to each prompt, and what each gate message shows.
    line `- [x] 0 Setup — …` and any `[!]` lines kept so far, then `T feat
    '<state file>' setup`, joined with `&&`. It prints the specifier's
    spawn. Exit ≠ 0 before `S init`: show the script's last line and stop.
-   A `flag:` line it printed: log its value with the next boundary call
-   and flag it at the first gate.
-2. Spawn `feat-specifier` with the brief's path. Once it has reported,
+   A `flag:` line it printed: log its value with your next own `step.sh`
+   call (harness, Chores) and flag it at the first gate.
+2. Spawn `feat-specifier` with the brief's path. In the response that
+   acts on its hand-back (with the next spawn, or with the gate message),
    delete the brief file, by the absolute path setup found, only when
    setup's preflight printed `brief in checkout: yes` (this checkout's
    `specs/briefs/<short name>.md`, the checkout `/feat` started in). Any
    other brief (in another worktree,
    elsewhere in this checkout, outside it) stays: `S log '<state file>'
-   '- [!] brief left in place: <path>'` chained before the boundary call,
-   and name it in the final message, so the user decides.
+   '- [!] brief left in place: <path>'` with your next own call (harness,
+   Chores), and name it in the final message, so the user decides.
 
 **Hard** (`step.sh`'s reasons: open markers, a blocker, no spec, a size
 remark): stories and requirements in a few lines, the open markers each
@@ -291,8 +292,10 @@ the user's changes, "back to 6" → from the first story.
 
 ## 7. Code review
 
-Before the first reviewers' spawns, the review move (see Board moves). The
-call that prints them prepared the diff (`diff:` key, `diff file:` the
+The review move (see Board moves) is a tool call in the response that
+makes the first reviewers' spawns (the last story's hand-back prints them);
+a failed move's `[!]` line goes with the batch's call. The call that prints
+them prepared the diff (`diff:` key, `diff file:` the
 diff it wrote to `reports/review.diff`; `added:` and `untracked, not in
 the diff:` lines). Give each `feat-code-reviewer` its spawn block's keys. On medium and large, 7a–7d's boundary call prints
 `7e` with 7d's cuts; the gate comes after 7e. For large, suggest the user
@@ -328,7 +331,8 @@ runs `ship.sh prepare` (numbering, commits, rebase), the checks, then
 `ship.sh publish` (secret scan, push, PR), or reports `blocked` or
 `conflict`. Never merge.
 
-- `done: PR #N`: the final message.
+- `done: PR #N`: the final message, once the `done:` check (harness)
+  printed it, never from the shipper's block alone.
 - `stop: ship blocked on a command for you`: give the `command:` line to
   the user as is (`ship.sh` blocked in the session); the state file stays
   done (resume finds the run while its branch has no upstream).

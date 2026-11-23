@@ -8,4 +8,6 @@ spawn: feat-specifier
   effort: medium
   report: @TOP@/specs/x/reports/2-specify.md
   continue: fresh
-boundary:	2	@TOP@/specs/x/reports/2-specify.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify.md
+boundary:	2	@TOP@/specs/x/reports/2-specify.md

@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 2 Specify
+# /feat state: Test feature
+--
+- [!] step: step: error: boundary 2 2-specify-2.md is neither the open boundary (2) nor the last decided one with the same report

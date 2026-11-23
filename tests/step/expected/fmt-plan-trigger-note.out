@@ -6,7 +6,9 @@ spawn: feat-planner
   model: sonnet
   effort: medium
   report: @TOP@/specs/x/reports/3-plan-2.md
-  continue: fresh
+  continue: planner
   from: @TOP@/specs/x/reports/3-plan.md
   unparsable: 3-plan.md: line 9 (Size trigger) — a value outside its format
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan-2.md
 boundary:	3	@TOP@/specs/x/reports/3-plan-2.md

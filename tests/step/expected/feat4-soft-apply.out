@@ -11,5 +11,7 @@ spawn: feat-planner
   report: @TOP@/specs/x/reports/3-plan.md
   continue: p1
   inputs: @TOP@/specs/x/reports/3-plan.in.md
-boundary:	3	@TOP@/specs/x/reports/3-plan.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan.md
+boundary:	3	@TOP@/specs/x/reports/3-plan.md
 answer call:	4	@TOP@/specs/x/reports/4-4a+4b+4c.md	sum=4-4a+4b+4c.md:@SUM@

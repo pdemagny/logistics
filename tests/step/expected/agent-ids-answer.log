@@ -1,0 +1,7 @@
+- Size: large
+- Agents: specifier s1, planner p1 (for SendMessage)
+- Current phase: 4 Design review
+# /feat state: Test feature
+--
+    - answer: approved (user: "ok")
+    - spec assumptions: kept as recommended

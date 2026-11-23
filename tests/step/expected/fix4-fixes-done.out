@@ -9,4 +9,6 @@ spawn: feat-bug-assessor
   continue: fresh
   cycle: after review fixes
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-test.md
 boundary:	3	@TOP@/specs/x/reports/3-test.md

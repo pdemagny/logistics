@@ -12,4 +12,6 @@ spawn: feat-implementer
   who: US2
   story: US2
   inputs: @TOP@/specs/x/reports/6-US2.in.md
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US2.md
 boundary:	6	@TOP@/specs/x/reports/6-US2.md

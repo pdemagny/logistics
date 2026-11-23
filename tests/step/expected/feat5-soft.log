@@ -1,5 +1,5 @@
 - Size: small
-- Agents: tasker t9 (for SendMessage)
+- Agents: none (every spawn is fresh)
 - Current phase: 6 Implement
 # /feat state: Test feature
 --

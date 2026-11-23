@@ -1,5 +1,5 @@
 - Size: medium
-- Agents: specifier a5e3e65997ed02c4b (for SendMessage)
+- Agents: none (every spawn is fresh)
 - Current phase: 3 Plan
 # /feat state: Test feature
 --

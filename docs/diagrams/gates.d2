@@ -22,8 +22,8 @@ you -> cc: /feat on the brief, in a fresh context
 cc -> step: setup
 step -> cc: spawn: specify
 cc -> agents: specify
-cc -> step: its report
-step -> cc: "[soft] or [hard], logged"
+agents -> step: its report
+step -> cc: "[soft] or [hard], logged (via the agent)"
 cc -> you: "answer its open questions, if [hard]" {class: maybe}
 you -> cc: your answer
 cc -> step: "the answer, logged as answer:"
@@ -32,19 +32,24 @@ step -> cc: "if it did: spawn the move"
 cc -> agents: move onto main
 cc -> you: decide on a conflict that changes behaviour, if any {class: maybe}
 cc -> agents: plan + design review
-cc -> step: their reports
+cc -> step: the reviewers' reports
 step -> cc: "[soft] or [hard]: findings merged"
 cc -> you: "check the spec, decide on findings that need you, if [hard]" {class: maybe}
 cc -> agents: tasks + consistency check
-cc -> step: its report
-step -> cc: "[soft] or [hard]: tasks compared"
+agents -> step: its report
+step -> cc: "[soft] or [hard]: tasks compared (via the agent)"
 cc -> you: "fix serious gaps or a task mismatch, if [hard]" {class: maybe}
 cc -> agents: implement, story by story
+agents -> step: each story's report
+step -> cc: "next story, then the reviewers (via the agent)"
 cc -> agents: code review
-cc -> step: their reports
+cc -> step: the reviewers' reports
 step -> cc: "[soft] or [hard]: findings merged"
 cc -> you: "decide on findings that need you, if [hard]" {class: maybe}
+cc -> step: "the answer, logged as answer:"
 cc -> agents: apply fixes, ship
+cc -> step: "the done: check"
+step -> cc: "done: PR #N"
 agents -> you: pull request, yours to merge {class: back}
 you -> cc: /feat rebase, when the PR conflicts
 cc -> agents: rebase, resolve, checks, push

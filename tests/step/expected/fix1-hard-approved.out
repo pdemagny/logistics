@@ -9,4 +9,6 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md

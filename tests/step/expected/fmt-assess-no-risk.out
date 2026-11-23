@@ -8,4 +8,6 @@ spawn: feat-bug-assessor
   continue: fresh
   from: @TOP@/specs/x/reports/1-assess.md
   unparsable: 1-assess.md: no Risk area: line
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	1	@TOP@/specs/x/reports/1-assess-2.md
 boundary:	1	@TOP@/specs/x/reports/1-assess-2.md

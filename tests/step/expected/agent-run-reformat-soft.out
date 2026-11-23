@@ -1,0 +1,13 @@
+soft
+base: same
+spawn: feat-planner
+  row: 3
+  mode: first
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/3-plan.md
+  continue: fresh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan.md
+boundary:	3	@TOP@/specs/x/reports/3-plan.md
+answer call:	2	@TOP@/specs/x/reports/2-specify-2.md	sum=2-specify-2.md:@SUM@

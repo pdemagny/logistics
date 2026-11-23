@@ -6,7 +6,9 @@ spawn: feat-tasker
   model: sonnet
   effort: medium
   report: @TOP@/specs/x/reports/5-tasks-2.md
-  continue: fresh
+  continue: tasker
   from: @TOP@/specs/x/reports/5-tasks.md
   unparsable: 5-tasks.md: line 1 (Tasks) — a value outside its format
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks-2.md
 boundary:	5	@TOP@/specs/x/reports/5-tasks-2.md

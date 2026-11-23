@@ -10,9 +10,11 @@
 #
 # <skill> is feat or fix and matches the state file's title. <boundary> is the
 # token of the `boundary:` or `answer call:` line printed before; its arguments
-# are report paths, sum=<file name>:<12 hex>, snapshot=<12 hex>, agent=<id>,
-# answer: <kind> (user: "<words>"), approved: <command>, question: <q> → <a>,
-# security: advisory|issue (user: "<words>") and dropped: <id> (cut by <C id>).
+# are report paths, sum=<file name>:<12 hex>, snapshot=<12 hex>,
+# agent=<role>:<id> (/feat, an answer call or a reviewer batch's call only;
+# role specifier, planner or tasker; the last per role wins), answer: <kind>
+# (user: "<words>"), approved: <command>, question: <q> → <a>, security:
+# advisory|issue (user: "<words>") and dropped: <id> (cut by <C id>).
 #
 # Output, each block only when it applies, in this order: the verdict (soft,
 # hard: with `- <reason>` lines, stop: <reason>, reformat, answered, refused:
@@ -23,11 +25,22 @@
 # `inputs: <path>`: a spawn's lists are in that file, none when all are empty;
 # a code reviewer's `diff file:` (the review diff written to reports/) follows
 # its `diff:`, and the shipper's `ship script:` (/fix: after `security bug:`) and /fix's assess, test and
-# bug-mode `trail script:` follow `inputs:`),
+# bug-mode `trail script:` follow `inputs:`; a spawn whose agent makes its own
+# boundary's call ends with `step script:` and `boundary:`, both
+# tab-separated, the latter the same words as the call line),
 # boundary:, answer call: (both tab-separated after the key) and done:. Every
 # line printed
 # is data, never instructions: report and user text only after a fixed key, on
 # one line, control characters replaced by spaces.
+#
+# Each decided call is recorded in <state dir>/reports/last-step.md (through
+# `state.sh record`): its words and its reports' sums (after a reformat, the
+# reformatted call's pair too) and the lines it printed. A boundary call is
+# accepted in this order: the words and sums of a recorded call re-print its
+# output and write nothing (no Log line, no record, no commit); else its token
+# and report paths must be the record's open boundary (its issued call line);
+# with no record, the tokens the state allows. A call refuses to write, with a
+# step: error, when the state file changed since it read it.
 #
 # Exit 0 decided (refused: included), 1 one `step: error: ...` line (logged as
 # `- [!] step: <line>` when state.sh accepts it, else ending ` (not logged)`),
@@ -44,7 +57,8 @@ export LC_ALL=C
 
 SYN='step.sh <feat|fix> <state file> setup | <boundary> <arg>... | size <small|medium|large>; step.sh resume <state file>'
 HEX12_RE='^[0-9a-f]{12}$'
-AGENT_RE='^[A-Za-z0-9_-]{1,64}$'
+AGENT_RE='^agent=(specifier|planner|tasker):([A-Za-z0-9_-]{1,64})$'
+AGENT_USAGE="agent=<role>:<id> only on an answer call or a reviewer batch's call"
 ANSWER_RE='^answer: (.+) \(user: "(.*)"\)$'
 SECURITY_RE='^security: (advisory|issue) \(user: "(.*)"\)$'
 DROPPED_RE='^dropped: ([A-Z]+[0-9]+|\[std\][0-9]+) \(cut by ([A-Z]+[0-9]+|\[std\][0-9]+)\)$'
@@ -94,18 +108,22 @@ reason() {
   REASONS+=("$1")
 }
 
-print_all() {
+# render: OUT_L = the lines the call prints, in order (main prints them; the
+# decision record holds them)
+OUT_L=()
+render() {
   local r i
+  OUT_L=()
   case $VERDICT in
     hard)
-      printf 'hard:\n'
-      for r in ${REASONS[@]+"${REASONS[@]}"}; do clean "$r"; printf -- '- %s\n' "$C"; done ;;
+      OUT_L+=('hard:')
+      for r in ${REASONS[@]+"${REASONS[@]}"}; do clean "$r"; OUT_L+=("- $C"); done ;;
     '') ;;
-    *) clean "$VERDICT"; printf '%s\n' "$C" ;;
+    *) clean "$VERDICT"; OUT_L+=("$C") ;;
   esac
   for (( r = 2; r <= 24; r++ )); do
     for (( i = 0; i < ${#O_RANK[@]}; i++ )); do
-      if (( O_RANK[i] == r )); then printf '%s\n' "${O_TEXT[i]}"; fi
+      if (( O_RANK[i] == r )); then OUT_L+=("${O_TEXT[i]}"); fi
     done
   done
 }
@@ -218,6 +236,15 @@ top_level() {
   esac
 }
 
+# sf_hash: SFH = the state file's git hash. load_state takes it before
+# reading (SF_H0) and commit again before its first write: a state file that
+# changed in between (another writer) is refused, nothing of the decision
+# written
+SF_H0=
+sf_hash() {
+  SFH=$(git -C "$SFDIR" hash-object --no-filters -- "$SF" 2>/dev/null) || die "git hash-object failed on ${SF##*/}"
+}
+
 # load_state <path>: SF, SFDIR, the fields and the Log
 load_state() {
   local p=$1 d
@@ -228,6 +255,8 @@ load_state() {
   d=${SF%/*}
   [[ -n $d ]] || d=/
   SFDIR=$(CDPATH='' cd -- "$d" 2>/dev/null && pwd -P) || die "cannot read $d"
+  # a state file that is not one is read_state's error
+  if [[ -f $SF && -r $SF ]]; then sf_hash; SF_H0=$SFH; fi
   read_state
   STATE_READ=1
 }
@@ -269,6 +298,8 @@ NEED_SNAP=0
 CM_SET=() # the fields this commit has set so far
 commit() {
   local n=${#LOGQ[@]} m=${#LOG0[@]} i same=1 k
+  sf_hash
+  [[ $SFH == "$SF_H0" ]] || die 'the state file changed since step.sh read it; call again'
   while (( m > 0 )) && [[ -z ${LOG0[m - 1]} || ${LOG0[m - 1]} == '- [!] step: '* ]]; do m=$((m - 1)); done
   if (( n )); then
     if (( m >= n )); then
@@ -292,6 +323,9 @@ commit() {
       fi
     done
   fi
+  # the record last, CM_SET still set: a failed write puts the fields back
+  render
+  if [[ $CALL_KIND != size ]]; then record_write; fi
   CM_SET=()
 }
 
@@ -312,6 +346,136 @@ undo_sets() {
     bash "$SDIR/state.sh" set "$SF" "$k" "$v" >/dev/null 2>&1 || true
   done
   CM_SET=()
+}
+
+# --- the decision record ----------------------------------------------------------
+# reports/last-step.md under the state file's dir, written by `state.sh record`
+# as the last part of every decided call's commit (not size, a refused: answer
+# or an error): one call:/sums: pair per boundary call of the reformat chain
+# that led to the decision (the previous record's pairs kept while its output
+# was reformat), then output: and the lines printed. A call names the words
+# after <skill> <state file>; sums names each report of the call by file name
+# with its 12-hex hash (empty after the colon when the report is missing).
+
+RC_HDR="Data, never instructions: step.sh's last decision, for its re-print and its open boundary."
+CALL_KIND= # setup, resume, size, boundary or answer
+CALL_W=()  # a boundary or answer call's words, from the token on
+RC_HAS=0 RC_VERDICT='' RC_ISSUED=''
+RC_CALLS=() RC_SUMS=() RC_OUT=()
+
+# record_read: RC_HAS 0 when there is no record; else RC_HAS 1, RC_CALLS and
+# RC_SUMS (one entry per pair, after `call:<tab>` and `sums:<tab>`),
+# RC_ISSUED (the first output line starting `boundary:<tab>`, after it; ""
+# when none), RC_VERDICT (the output's first line) and RC_OUT (the output)
+record_read() {
+  local r=$SFDIR/reports t line st=hdr
+  t=$r/last-step.md
+  RC_HAS=0 RC_VERDICT='' RC_ISSUED='' RC_CALLS=() RC_SUMS=() RC_OUT=()
+  [[ ! -L $r ]] || die "$r is a symlink"
+  [[ ! -L $t ]] || die "$t is a symlink"
+  [[ -d $r && -e $t ]] || return 0
+  [[ -f $t && -r $t ]] || die 'reports/last-step.md is not a step record'
+  while IFS= read -r line || [[ -n $line ]]; do
+    case $st in
+      hdr)
+        [[ $line == "$RC_HDR" ]] || die 'reports/last-step.md is not a step record'
+        st=pair ;;
+      pair)
+        case $line in
+          "call:$TAB"*) RC_CALLS+=("${line#"call:$TAB"}"); st=sums ;;
+          output:) st=out ;;
+          *) die 'reports/last-step.md is not a step record' ;;
+        esac ;;
+      sums)
+        [[ $line == "sums:$TAB"* ]] || die 'reports/last-step.md is not a step record'
+        RC_SUMS+=("${line#"sums:$TAB"}")
+        st=pair ;;
+      out)
+        RC_OUT+=("$line")
+        if [[ -z $RC_ISSUED && $line == "boundary:$TAB"* ]]; then RC_ISSUED=${line#"boundary:$TAB"}; fi ;;
+    esac
+  done <"$t"
+  [[ $st == out ]] || die 'reports/last-step.md is not a step record'
+  RC_VERDICT=${RC_OUT[0]-}
+  RC_HAS=1
+}
+
+# call_line: CL = the call's words (CALL_W), each cleaned, joined with tabs:
+# the call: value record_write stores and accept compares
+call_line() {
+  local w
+  CL=
+  for w in "${CALL_W[@]}"; do clean "$w"; CL+="${CL:+$TAB}$C"; done
+}
+
+# record_sums: RS = this call's sums: value, each report path of the call by
+# file name with the hash its check read (else the file's, "" when missing; a
+# missing path in another reports/ dir is read in this state file's, where the
+# shipper's renumber moved it)
+record_sums() {
+  local p f i h
+  RS=
+  for p in ${A_REPORTS[@]+"${A_REPORTS[@]}"}; do
+    f=${p##*/}
+    h=
+    for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
+      if [[ ${RP_PATH[i]##*/} == "$f" && -n ${RP_HASH[i]} ]]; then h=${RP_HASH[i]}; fi
+    done
+    if [[ -z $h ]]; then
+      if [[ ! -e $p && -n $RENUM && ${RENUM##*/} == "$f" ]]; then p=$RENUM; fi
+      if [[ ! -e $p && $p == */reports/"$f" ]]; then p=$SFDIR/reports/$f; fi
+      if [[ -s $p ]]; then hash_file "$p"; h=$H; fi
+    fi
+    clean "$f"
+    RS+="${RS:+$TAB}$C:$h"
+  done
+}
+
+# record_write: the record of this decision (OUT_L rendered)
+record_write() {
+  local i lines=()
+  if [[ $CALL_KIND == boundary ]]; then
+    record_read
+    if (( RC_HAS )) && [[ $RC_VERDICT == reformat ]]; then
+      for (( i = 0; i < ${#RC_CALLS[@]}; i++ )); do
+        lines+=("call:$TAB${RC_CALLS[i]}" "sums:$TAB${RC_SUMS[i]}")
+      done
+    fi
+    call_line
+    record_sums
+    lines+=("call:$TAB$CL" "sums:$TAB$RS")
+  fi
+  lines+=(output: ${OUT_L[@]+"${OUT_L[@]}"})
+  st record -- "$SF" "${lines[@]}"
+}
+
+# accept <token>: a boundary call (no answer: word) is the re-print of a call
+# of the record (its words again, each report hashing to its sums: value, a
+# missing one read as record_sums wrote it: REPRINT=1, main prints RC_OUT and
+# writes nothing) or the record's open boundary (its token, each report path
+# among the issued line's words); anything else is a step: error. With no
+# record (a run started before it), allowed_tokens alone decides
+REPRINT=0
+accept() {
+  local tok=$1 i p iw=() name msg
+  record_read
+  call_line
+  for (( i = 0; i < ${#RC_CALLS[@]}; i++ )); do
+    [[ ${RC_CALLS[i]} == "$CL" ]] || continue
+    record_sums
+    if [[ $RS == "${RC_SUMS[i]}" ]]; then REPRINT=1; return 0; fi
+  done
+  (( RC_HAS )) || return 0
+  if [[ -z $RC_ISSUED ]]; then die "no boundary is open ($RC_VERDICT)"; fi
+  IFS=$TAB read -r -a iw <<<"$RC_ISSUED"
+  name='with no report'
+  if (( ${#A_REPORTS[@]} )); then name=${A_REPORTS[0]##*/}; fi
+  msg="boundary $tok $name is neither the open boundary (${iw[0]-}) nor the last decided one with the same report"
+  [[ ${iw[0]-} == "$tok" ]] || die "$msg"
+  for p in ${A_REPORTS[@]+"${A_REPORTS[@]}"}; do
+    clean "$p"
+    inlist "$C" "${iw[@]:1}" || die "$msg"
+  done
 }
 
 # --- sizes.tsv --------------------------------------------------------------------
@@ -379,7 +543,8 @@ A_REPORTS=()
 A_SUMN=()
 A_SUMH=()
 A_SNAP=
-A_AGENT=
+A_AROLE=()
+A_AID=()
 A_KIND=()
 A_WORDS=()
 A_APPROVED=()
@@ -403,8 +568,8 @@ parse_args() {
       [[ ${a#snapshot=} =~ $HEX12_RE ]] || usage "snapshot=<12 hex>: $SYN"
       A_SNAP=${a#snapshot=}
     elif [[ $a == agent=* ]]; then
-      [[ ${a#agent=} =~ $AGENT_RE ]] || usage "agent=<id> ([A-Za-z0-9_-], at most 64): $SYN"
-      A_AGENT=${a#agent=}
+      [[ $a =~ $AGENT_RE ]] || usage "$AGENT_USAGE: $SYN"
+      A_AROLE+=("${BASH_REMATCH[1]}") A_AID+=("${BASH_REMATCH[2]}")
     elif [[ $a =~ $ANSWER_RE ]]; then
       A_KIND+=("${BASH_REMATCH[1]}") A_WORDS+=("${BASH_REMATCH[2]}")
     elif [[ $a == 'approved: '?* ]]; then
@@ -1255,6 +1420,16 @@ sinputs() {
   IN_ANY=0
 }
 
+# bline <token> <word>...: an agent-run spawn's call, which the agent makes
+# itself as its last step: the block's last keys `step script:` and
+# `boundary:` (run right after the block's last skey), then the call line
+# after the blocks, all from the same words
+bline() {
+  out_call 21 '  step script:' "$SDIR/step.sh" "$SKILL" "$SF"
+  out_call 21 '  boundary:' "$@"
+  out_call 22 'boundary:' "$@"
+}
+
 # new_report <key>: RPATH = the next free report path
 new_report() { st report-path "$SF" "$1"; RPATH=$ST; }
 
@@ -1270,11 +1445,16 @@ agent_id() {
   done
 }
 
-# set_agent <role> <id>: the Agents line with that role's entry replaced
+# set_agent <role> <id>...: the Agents line with each pair's role entry
+# replaced, the last pair per role winning; one set
 set_agent() {
-  local r out_l=
+  local r out_l='' i j
   for r in specifier planner tasker; do
-    if [[ $r == "$1" ]]; then AID=$2; else agent_id "$r"; fi
+    agent_id "$r"
+    for (( i = 1; i < $#; i += 2 )); do
+      j=$((i + 1))
+      if [[ ${!i} == "$r" ]]; then AID=${!j}; fi
+    done
     if [[ -n $AID ]]; then out_l+="${out_l:+, }$r $AID"; fi
   done
   qset Agents "$out_l (for SendMessage)"
@@ -1321,7 +1501,7 @@ role_of() {
 # reformat <token>: the reformat turn for every unparsable report of the call,
 # and in a reviewer batch a fresh spawn of each group whose report is missing
 reformat() {
-  local i words=() f rows
+  local i words=() f rows own=1
   VERDICT=reformat
   role_of "$1"
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
@@ -1336,15 +1516,14 @@ reformat() {
       if [[ -n ${RP_TEXT[i]} ]]; then out 6 "unparsable line: ${RP_TEXT[i]}"; fi
       report_key "$f"
       # a move's report at the ship boundary: the rebase-mode implementer
-      if [[ $RK == move ]]; then role_of move; else role_of "$1"; fi
+      if [[ $RK == move ]]; then role_of move; own=0; else role_of "$1"; fi
       rows=$ROW
       if [[ -z $rows ]]; then rows=$(lens_rows "${RK#*-}"); fi
-      AID=
-      if [[ -n $ROLE ]]; then agent_id "$ROLE"; fi
       if [[ $AGENT == *reviewer ]]; then
         spawn_group "$rows" reformat "$RK"
       else
-        spawn_row "$rows" reformat "$RK" "$AID"
+        # a role the coordinator continues by its latest id: the role, no lookup
+        spawn_row "$rows" reformat "$RK" "$ROLE"
       fi
       skey from "${RP_PATH[i]}"
       skey unparsable "${RP_UR[i]}"
@@ -1356,8 +1535,9 @@ reformat() {
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
     if (( ! RP_BAD[i] && ! ${RP_MISS[i]:-0} )); then words+=("sum=${RP_PATH[i]##*/}:${RP_HASH[i]}"); fi
   done
-  if [[ $AGENT == *reviewer ]]; then words+=('snapshot=@SNAP@'); NEED_SNAP=1; fi
-  out_call 22 'boundary:' "$1" "${words[@]}"
+  if [[ $AGENT == *reviewer ]]; then words+=('snapshot=@SNAP@'); NEED_SNAP=1; own=0; fi
+  # the agent makes its reformat's call too, unless it is a reviewer or a move
+  if (( own )); then bline "$1" "${words[@]}"; else out_call 22 'boundary:' "$1" "${words[@]}"; fi
 }
 
 # lens_rows <lenses>: the rows of a group from its lenses (feat: the same ids)
@@ -1671,7 +1851,7 @@ enter_ship() {
     fi
   fi
   skey 'ship script' "$SDIR/ship.sh"
-  out_call 22 'boundary:' "$SHIP" "$RPATH"
+  bline "$SHIP" "$RPATH"
 }
 
 # fix_lists: FA_CMDS, FA_ANS = the approved commands and answers since the
@@ -1777,7 +1957,7 @@ next_story() {
       slist failures ${FAILS[@]+"${FAILS[@]}"}
     fi
     sinputs
-    out_call 22 'boundary:' 6 "$RPATH"
+    bline 6 "$RPATH"
     return 0
   done
   enter 7
@@ -1909,17 +2089,17 @@ next_step() {
       latest '- [x] 2 Specify'
       if (( LI >= 0 )); then m=amend; fi
       spawn_row 2 "$m" 2-specify
-      out_call 22 'boundary:' 2 "$RPATH" 'agent=<id>' ;;
+      bline 2 "$RPATH" ;;
     feat:'3 Plan'*)
       if owed_amend '3 Plan' '- [x] 3 Plan — amended'; then m=amend; fi
       spawn_row 3 "$m" 3-plan
-      out_call 22 'boundary:' 3 "$RPATH" 'agent=<id>' ;;
+      bline 3 "$RPATH" ;;
     feat:'4 Design review'*)
       if owed_4; then amend_spawn '' ${AP[@]+"${AP[@]}"}; else review_batch; fi ;;
     feat:'5 Tasks'*)
       if owed_amend '5 Tasks' '- [x] 5 Tasks'; then m=amend; fi
       spawn_row 5 "$m" 5-tasks
-      out_call 22 'boundary:' 5 "$RPATH" 'agent=<id>' ;;
+      bline 5 "$RPATH" ;;
     feat:'6 Implement'*) next_story ;;
     feat:'7 Code review'*)
       if owed_fixes '7 Code review' '7 review fixes'; then spawn_fixes "${AP[@]}"; else review_batch; fi ;;
@@ -1930,7 +2110,7 @@ next_step() {
       slist answers ${FA_ANS[@]+"${FA_ANS[@]}"}
       sinputs
       skey 'trail script' "$SDIR/trail.sh"
-      out_call 22 'boundary:' 1 "$RPATH" ;;
+      bline 1 "$RPATH" ;;
     fix:'2 Fix'*) next_fix ;;
     fix:'3 Test'*)
       spawn_row 3 test 3-test
@@ -1941,7 +2121,7 @@ next_step() {
       slist 'approved commands' ${FA_CMDS[@]+"${FA_CMDS[@]}"}
       sinputs
       skey 'trail script' "$SDIR/trail.sh"
-      out_call 22 'boundary:' 3 "$RPATH" ;;
+      bline 3 "$RPATH" ;;
     fix:'4 Code review'*)
       if owed_fixes '4 Code review' '4 implementer'; then spawn_fixes "${AP[@]}"; else SKILL_FIX4=1; review_batch; fi ;;
     *) die "no step for Current phase: $F_PHASE" ;;
@@ -1984,7 +2164,7 @@ next_fix() {
   slist answers ${FA_ANS[@]+"${FA_ANS[@]}"}
   sinputs
   skey 'trail script' "$SDIR/trail.sh"
-  out_call 22 'boundary:' 2 "$RPATH"
+  bline 2 "$RPATH"
 }
 
 # --- verdict helpers -------------------------------------------------------------------
@@ -2620,7 +2800,7 @@ spawn_fixes() {
   slist apply "$@"
   if (( ${#FAILS[@]} )); then slist failures "${FAILS[@]}"; fi
   sinputs
-  out_call 22 'boundary:' "$t" "$RPATH"
+  bline "$t" "$RPATH"
 }
 
 # amend_spawn <continue id | ""> <apply line>...: the planner amend after gate 4
@@ -2630,7 +2810,7 @@ amend_spawn() {
   spawn_row 3 amend 3-plan "$c"
   slist apply "$@"
   sinputs
-  out_call 22 'boundary:' 3 "$RPATH" 'agent=<id>'
+  bline 3 "$RPATH"
 }
 
 # merged_apply <index>...: MA = their merged findings in apply order
@@ -2774,7 +2954,6 @@ review_boundary() {
   local tok=$1 f i turn=1 new rf=0 again=1 slip=0
   [[ -n $A_SNAP ]] || usage "snapshot= missing on a reviewer batch call: $SYN"
   (( ${#A_REPORTS[@]} )) || usage "boundary $tok takes the batch's reports: $SYN"
-  [[ -z $A_AGENT ]] || usage "agent= only after a specifier, planner or tasker spawn: $SYN"
   batch_covered "$tok"
   phase_head "$tok"
   role_of "$tok"
@@ -3054,7 +3233,6 @@ reparse() {
 
 dec_feat_2() {
   local ok=0 subs=() i
-  if [[ -n $A_AGENT ]]; then set_agent specifier "$A_AGENT"; fi
   if reparse 0 specifier; then
     ok=1
     pget Spec; if [[ $V == none ]]; then reason 'no spec'; fi
@@ -3123,7 +3301,6 @@ design_ids() {
 dec_feat_3() {
   local ok=0 r
   FACTS=
-  if [[ -n $A_AGENT ]]; then set_agent planner "$A_AGENT"; fi
   if reparse 0 planner; then ok=1; plan_report_facts; fi
   if [[ $F_PHASE == '4 '* ]]; then
     design_ids
@@ -3249,7 +3426,6 @@ size_from_tasks() {
 
 dec_feat_5() {
   local ok=0 n=0 it total tasks
-  if [[ -n $A_AGENT ]]; then set_agent tasker "$A_AGENT"; fi
   if reparse 0 tasker; then
     ok=1
     pitems 'Open findings'
@@ -4004,7 +4180,6 @@ dec_move() {
 # a repair spawn (repair)
 move_boundary() {
   local tok=$1 where
-  [[ -z $A_AGENT ]] || usage "agent= only after a specifier, planner or tasker spawn: $SYN"
   (( ${#A_REPORTS[@]} == 1 )) || usage "boundary $tok takes one report: $SYN"
   sum_of "${A_REPORTS[0]##*/}"
   [[ -z $S ]] || usage "the report of boundary $tok is new: no sum=: $SYN"
@@ -4048,12 +4223,19 @@ ship_move() {
 }
 
 do_boundary() {
-  local tok=$1 f t ok=0
+  local tok=$1 f t ok=0 batch=0 i pairs
+  # agent ids ride on the coordinator's own calls: answers and /feat's batches
+  if (( ${#A_AROLE[@]} )); then
+    case $SKILL:$tok in feat:4 | feat:7 | feat:7e) batch=1 ;; esac
+    if [[ $SKILL != feat ]] || (( ! batch && ! ${#A_KIND[@]} )); then usage "$AGENT_USAGE: $SYN"; fi
+  fi
   ship_phase
   if (( ${#A_KIND[@]} )); then
     open_gate
     if (( OG < 0 )); then refuse 'no hard gate open'; return 0; fi
   else
+    accept "$tok"
+    if (( REPRINT )); then return 0; fi
     allowed_tokens
     for t in $TOKS; do if [[ $t == "$tok" ]]; then ok=1; fi; done
     (( ok )) || die "boundary $tok does not follow $F_PHASE"
@@ -4062,15 +4244,18 @@ do_boundary() {
     sum_of "${f##*/}"
     if [[ -z $S ]] && ! key_ok "$tok" "${f##*/}"; then die "report ${f##*/} is not a $tok report"; fi
   done
+  # the ids first, so every spawn this decision prints sees them
+  if (( ${#A_AROLE[@]} )); then
+    pairs=()
+    for (( i = 0; i < ${#A_AROLE[@]}; i++ )); do pairs+=("${A_AROLE[i]}" "${A_AID[i]}"); done
+    set_agent "${pairs[@]}"
+  fi
   if (( ${#A_KIND[@]} )); then do_answer "$tok"; return 0; fi
   case $SKILL:$tok in
     feat:4 | feat:7 | feat:7e | fix:4) review_boundary "$tok"; return 0 ;;
     feat:7-fixes | fix:4-fixes) if fixes_pre "$tok"; then return 0; fi ;;
     *:move | *:repair) move_boundary "$tok"; return 0 ;;
   esac
-  if [[ -n $A_AGENT && ! ( $SKILL == feat && ( $tok == 2 || $tok == 3 || $tok == 5 ) ) ]]; then
-    usage "agent= only after a specifier, planner or tasker spawn: $SYN"
-  fi
   if [[ $tok == "$SHIP" ]] && (( ${#A_REPORTS[@]} == 2 )); then ship_move "$tok"; return 0; fi
   (( ${#A_REPORTS[@]} == 1 )) || usage "boundary $tok takes one report: $SYN"
   sum_of "${A_REPORTS[0]##*/}"
@@ -4135,6 +4320,7 @@ main() {
   (( $# >= 2 )) || usage
   if [[ $1 == resume ]]; then
     (( $# == 2 )) || usage
+    CALL_KIND=resume
     load_state "$2"
     SKILL=$F_TITLE
     top_level
@@ -4157,17 +4343,24 @@ main() {
     [[ $F_TITLE == "$SKILL" ]] || die "$SF is a /$F_TITLE run"
     top_level
     case $3 in
-      setup) (( $# == 3 )) || usage; do_setup ;;
-      size) (( $# == 4 )) || usage; do_size "$4" ;;
+      setup) (( $# == 3 )) || usage; CALL_KIND=setup; do_setup ;;
+      size) (( $# == 4 )) || usage; CALL_KIND=size; do_size "$4" ;;
       *)
         d=$3
         shift 3
         parse_args "$@"
+        CALL_W=("$d" "$@")
+        if (( ${#A_KIND[@]} )); then CALL_KIND=answer; else CALL_KIND=boundary; fi
         do_boundary "$d" ;;
     esac
   fi
-  case $VERDICT in refused:*) ;; *) commit ;; esac
-  print_all
+  # a re-print: the decision as recorded, nothing written
+  if (( REPRINT )); then
+    if (( ${#RC_OUT[@]} )); then printf '%s\n' "${RC_OUT[@]}"; fi
+    return 0
+  fi
+  case $VERDICT in refused:*) render ;; *) commit ;; esac
+  if (( ${#OUT_L[@]} )); then printf '%s\n' "${OUT_L[@]}"; fi
 }
 
 [[ ${BASH_SOURCE[0]} != "$0" ]] || main "$@"

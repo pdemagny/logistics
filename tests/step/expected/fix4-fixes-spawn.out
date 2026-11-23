@@ -10,5 +10,7 @@ spawn: feat-implementer
   continue: fresh
   who: implementer
   inputs: @TOP@/specs/x/reports/4-fixes.in.md
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	4-fixes	@TOP@/specs/x/reports/4-fixes.md
 boundary:	4-fixes	@TOP@/specs/x/reports/4-fixes.md
 answer call:	4	@TOP@/specs/x/reports/4-7a+7b.md	sum=4-7a+7b.md:@SUM@
