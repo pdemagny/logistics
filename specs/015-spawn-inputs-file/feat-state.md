@@ -1,4 +1,16 @@
-# Brief: step.sh writes each spawn's lists to an inputs file the agent reads
+# /feat state: step.sh writes each spawn's lists to an inputs file the agent reads
+
+- Branch: spawn-inputs-file Worktree: /home/pierre/Projects/logistics/.claude/worktrees/brief-spawn-inputs-file
+- Size: small
+- Agents: specifier adde0015cfbe07fac, planner ad00eb91b7fc8f711, tasker ab039c810e98928c7 (for SendMessage)
+- Current phase: done (shipping)
+- Conventions: Conventional commits type(scope): short message, one logical change per commit, never co-authored, stage only task files. git: call /usr/bin/git directly, one plain command per call (rtk hook). rm/cp/mv are -i aliases: use command rm -f etc. Shell is zsh. step.sh and ship.sh: Bash 3.2, no jq, no Python, shellcheck clean; tests in tests/step. An agent input or report contract changes with step.sh, tests/step, harness.md and the skills together; /feat and /fix stay thin; /tiny SKILL.md capped at 200 lines by lint. Keep /feat-only words out of harness.md, rebase.md, move.md. sizes.json is the source; run mise run diagrams after editing it. Checks: mise run lint, mise run test:step and the other mise test:* tasks, mise run test:apm. CHANGELOG is generated: write feat/fix subjects for users. PR body says Closes #69, never a commit message.
+- Allowed Spec Kit hooks: none
+- Map: none
+- Issue: pdemagny/logistics#69
+
+## Brief
+
 - Size: small — ~25 tasks expected: one writer and eight call sites in step.sh, their tests/step cases, six agents' input sections, harness.md and three skills
 - Short name: spawn-inputs-file
 - Kind: feat
@@ -137,3 +149,54 @@ ship-script `/feat`, medium, 79 coordinator calls, 21 spawns):
   and `/tiny` skills change together (project rule: an input contract
   changes with its callers). `/feat` and `/fix` stay thin.
 - `/tiny` stays within its 200-line lint cap.
+
+## Log
+
+- [x] 0 Setup — brief specs/briefs/spawn-inputs-file.md (small, #69); no Spec Kit hooks; board users/pdemagny/projects/2, #69 set to In progress; kept the existing worktree, branch renamed spawn-inputs-file; base current (2e6d34a)
+- [x] 2 Specify [soft] — spec.md written
+    - Stories: US1 Agents receive every list exactly as step.sh wrote it (P1); US2 Empty and repeated spawns stay clean (P2); US3 /tiny's review spawn drops its two none lists (P3)
+    - Requirements: 16; FR-001 one inputs: line replaces list keys; FR-004 file is report path with .in.md; FR-007 guards stay in state.sh; FR-009 agents read the file, missing line means none; FR-012 file never on Wrote: list; FR-014 /tiny drops design and rejected keys within 200 lines
+    - Spec assumptions: 1. The six named agents are the only ones taking lists (recommended: keep as written); 2. state.sh subcommand shape left to planning (recommended: keep as written)
+    - Unchecked checklist items: none
+- [!] 3 Plan — unparsable: 3-plan.md: line 28 (Size trigger); reformat 1 of 1
+- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none
+- [x] 4 Design review [soft] — auto-applied D1, D2
+    - D1 contracts/prompts.md: "The six agents" sentence — Continued spawns: the agent sentence says "the file on the prompt's `inputs:` line" and "no `inputs:` line: every list is `none`". A `SendMessage` continuation is not the original prompt. The agent could reuse the earlier spawn's file, or treat a message with no line as "none", and FR-005 forbids the first. — rec: apply
+    - D2 plan.md: Technical Context "Testing" and Design "Tests" — The plan's test list is inconsistent: Technical Context says "five new cases", while Design lists three new cases (all empty, awkward item, printed twice) plus three gap cases (design batch with `rejected`, 7e, `/fix` 1 with commands and answers), with the awkward case possibly the same as the last. An implementer would have to guess the count and which case does what. — rec: apply
+    - spec assumptions: kept as recommended
+- [x] 3 Plan — amended (D1, D2); assumptions needing you: none; constitution: pass; blockers: none; size trigger: none
+- [x] 5 Tasks [soft] — 27 tasks; story.sh: match; analyze ran
+- [!] 6 Implement — unparsable: 6-US1.md: line 4 (Checks); reformat 1 of 1
+- [x] 6 US1 — not verified: none
+    - wrote: specs/015-spawn-inputs-file/tasks.md
+- [!] 6 Implement — report missing: 6-US2.md
+- [x] 6 Implement [hard] — report missing: 6-US2.md
+    - answer: back to 6 (user: "ok, rerun US2")
+- [!] 6 Implement — unparsable: 6-US1-3.md: line 16 (Files changed); reformat 1 of 1
+- [x] 6 US1 — not verified: none
+- [!] 6 Implement — report missing: 6-US2.md
+- [x] 6 Implement [hard] — report missing: 6-US2.md
+    - answer: back to 6 (user: "ok, run the diagnostic then back to 6")
+- [x] 6 US1 — not verified: none
+- [x] 6 US2 — not verified: none
+    - wrote: specs/015-spawn-inputs-file/tasks.md
+- [x] 6 US3 — not verified: none
+    - wrote: specs/015-spawn-inputs-file/tasks.md
+- [x] 6 Implement [soft] — tasks done: 27 (0 not verified); checks pass
+- [x] 7 Code review [hard] — B1, B2, S1 need you; S1 security
+    - B1 - — none — rec: user (no valid recommendation)
+    - B2 - — none — rec: user (no valid recommendation)
+    - S1 - — none
+    - P1 .apm/skills/feat/scripts/step.sh:1209-1217 — one extra `state.sh inputs` process per spawn (one file write); negligible next to an agent spawn — rec: skip (no real cost)
+    - C1 .apm/skills/feat/scripts/state.sh:870-895 — shrink: `reports_dir`/`reports_make` split is used by both report-path and inputs, so it removes duplication; nothing to cut — rec: skip (already lean)
+    - R1 .apm/skills/feat/scripts/state.sh:20 — Header comment column alignment of the `snapshot` line was shifted by one space relative to its neighbours — rec: apply
+    - R2 .apm/skills/feat/references/harness.md:274-276 — harness.md bullet re-wrapped with a short orphan line ("inputs file. Show the lists") — rec: skip (cosmetic)
+    - [std]1 .apm/skills/tiny/SKILL.md:148 — hard: garbled prose in /tiny's review step ("size and size `small`"), left over from deleting the two `none` lists — rec: apply
+    - [std]2 .apm/skills/feat/scripts/state.sh:20 — judgement: the state.sh usage comment column for `snapshot` was re-aligned (token text moved) with no change to snapshot — rec: skip (cosmetic)
+    - answer: approved (user: "ok, leave B1 B2 S1")
+    - answer: leave B1 (user: "ok, leave B1 B2 S1")
+    - answer: leave B2 (user: "ok, leave B1 B2 S1")
+    - answer: leave S1 (user: "ok, leave B1 B2 S1")
+    - outcome: picked R1, [std]1; rejected B1 (user: "ok, leave B1 B2 S1"), B2 (user: "ok, leave B1 B2 S1"), S1 (user: "ok, leave B1 B2 S1"), P1 (as recommended), C1 (as recommended), R2 (as recommended), [std]2 (as recommended)
+- [x] 7 review fixes — [std]1 → applied; R1 → applied; performance: none; checks: mise run lint → pass, mise run test:step → pass, mise run test:state → pass, mise run test:tracker → pass, mise run test:spec-number → pass, mise run test:story → pass, mise run test:sizes → pass, mise run test:ship → pass, mise run test:measure → pass, mise run test:apm → pass; not verified: none
+- [x] 8 Ship
