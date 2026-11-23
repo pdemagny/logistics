@@ -10,6 +10,7 @@ Coordinator
   spawn an agent                     2
   chores                             1
   text only                          2
+  text only after a spawn          1.5
   context, first call             4510
   context, median of calls        5610
   context, max of calls           6080
@@ -61,6 +62,7 @@ Coordinator
   spawn an agent                     2
   chores                             0
   text only                          1
+  text only after a spawn            1
   context, first call             1010
   context, median of calls        1010
   context, max of calls           1010

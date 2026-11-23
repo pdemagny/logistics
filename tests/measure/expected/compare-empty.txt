@@ -10,6 +10,7 @@ Coordinator                     before   since    diff
   spawn an agent               no runs       2
   chores                       no runs       1
   text only                    no runs       2
+  text only after a spawn      no runs     1.5
   context, first call          no runs    4510
   context, median of calls     no runs    5610
   context, max of calls        no runs    6080
@@ -95,6 +96,7 @@ Coordinator                     before   since    diff
   spawn an agent               no runs       2
   chores                       no runs       0
   text only                    no runs       1
+  text only after a spawn      no runs       1
   context, first call          no runs    1010
   context, median of calls     no runs    1010
   context, max of calls        no runs    1010

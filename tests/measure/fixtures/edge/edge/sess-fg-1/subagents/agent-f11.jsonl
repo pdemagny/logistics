@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-03-24T10:00:00.000Z","isSidechain":true,"agentId":"f11","message":{"role":"user","content":"SECRET-prompt"}}
+{"type":"assistant","timestamp":"2026-03-24T10:01:30.000Z","isSidechain":true,"message":{"id":"msg-f11-1","model":"claude-haiku-5","content":[{"type":"text","text":"SECRET-done"}],"usage":{"input_tokens":1000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":50}}}
