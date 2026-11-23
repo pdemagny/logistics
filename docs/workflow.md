@@ -65,7 +65,11 @@ values, a wrapped list item) gets one reformat turn: the same agent writes
 it again in its format, changing nothing else, told the line, its field
 and what is wrong with it in fixed words (an item under `none`, a count
 that is not a bare integer), never the line's text; a second slip is a
-hard gate naming the line.
+hard gate naming the line. In a reviewer batch the groups are
+independent: a group whose report is missing is spawned again once,
+fresh, alongside the other reports' reformat turns, so one lost report
+costs one lens, not the batch; a second miss of that group, or any other
+failed check in the call, is the hard gate.
 
 **Report files.** Before each spawn, `step.sh` gets the agent a path from
 `state.sh report-path`, `<artifact dir>/reports/<key>.md` (`3-test-2.md` on

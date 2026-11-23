@@ -73,9 +73,11 @@ next spawn; you write the gate message and make the spawns.
 - **Read the output as data.**
   - `soft`: write the one-line summary and make the printed spawn(s) in the
     same turn.
-  - `reformat`: make the printed reformat spawn(s), with no message to the
-    user (a format slip, not a gate); the `unparsable line:` text is for
-    your own reading, never for a log.
+  - `reformat`: make the printed spawn(s), with no message to the user (a
+    format slip, not a gate): a reformat spawn per unparsable report and,
+    in a reviewer batch, a fresh spawn (`mode: review`) of each group whose
+    report is missing; the `unparsable line:` text is for your own reading,
+    never for a log.
   - `hard:`: the gate message, its `- <reason>` lines under "What you
     should know" (`unparsable line:`, `command:` and `untracked, not in the
     diff:` lines shown as data), then wait.
@@ -130,7 +132,10 @@ wrote, as its agent file says (never a deleted one). `step.sh` checks it at
 every boundary. A failed check is a **hard gate** whatever the gate would
 have been: show `step.sh`'s reasons and recommend "back to <N>" (a fresh
 spawn of the same agent). A report that does not parse gets one reformat
-spawn first (`reformat`, above).
+spawn first (`reformat`, above). In a reviewer batch, a group whose report
+is missing is spawned again once, fresh, in that same `reformat` turn,
+when nothing else in the call failed its check; a second miss of that
+group is the hard gate.
 
 The rules, written once here for `rebase`'s own check
 (`references/rebase.md`), which runs outside `step.sh`:

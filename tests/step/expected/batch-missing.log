@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 7 Code review
+# /feat state: Test feature
+--
+- [!] 7 Code review — report missing: 7-7d.md; fresh spawn 1 of 1

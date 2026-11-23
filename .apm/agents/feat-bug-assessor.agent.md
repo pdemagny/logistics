@@ -160,9 +160,14 @@ when `yes`, `Remediations`, `Preferred remediation`, `Alternatives`,
 `Reproduction detail`, `Would run`, `Public behaviour change` when `yes`,
 `Open questions`, `Proposed size`, `Sections` when an error. Test mode:
 `Reproduction (post-fix)`, `Missing for verified`, `Not verified items`,
-`Still failing`, `Would run`, `Redacted` when not `none`. Each request's
-report goes to the path given with it; never write an earlier path again.
-With no report path, write no report file and hand back the full report.
+`Still failing`, `Would run`, `Redacted` when not `none`. Writing it is
+your job, never the orchestrator's (it never writes reports; a missing one
+fails the report check, which only a re-run of the phase clears). Never
+hand back before that Write has returned, never ask anyone to write it for
+you; if the Write fails, try once more, then hand back the digest with a
+first line `Report not written: <its error>`. Each request's report goes
+to the path given with it; never write an earlier path again. With no
+report path, write no report file and hand back the full report.
 
 Report, and nothing else. Each list item is one `- ` line at column 0,
 never wrapped; write `none` for an empty field or section. A list field

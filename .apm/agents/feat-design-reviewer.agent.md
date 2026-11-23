@@ -135,10 +135,16 @@ message asking for a new report). Then, once the review is done, write the
 full report below (its `Wrote:` field listing that path) to that path with
 Write, as your last write, and hand back the digest: the `Paraphrase (4c)`
 items, and the `Paraphrase vs brief (4c)` line when it says `contradicts`.
-Each request's report goes to the path given with it; never write an
-earlier path again. `step.sh` checks every `Wrote:` path on disk before the
-run goes on. With no report path, write no file and hand back the full
-report, `Wrote: none`.
+Writing it is your job, never the orchestrator's (it never writes reports;
+a missing one costs a re-run of your lenses). Never hand back before that
+Write has returned, never ask anyone to write it for you; if the Write
+fails, try once more, then hand back the digest with a first line `Report
+not written: <its error>`. Each request's report goes to the path given
+with it; never write an earlier path again. `step.sh` checks every
+`Wrote:` path on disk before the run goes on. Only when the request gives
+no report path at all (no `report:` key, no path in a message), write no
+file and hand back the full report, `Wrote: none`; a full report handed
+back in place of a path you were given is a missing report.
 
 ## Report, and nothing else
 

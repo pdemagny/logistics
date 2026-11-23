@@ -1,0 +1,7 @@
+hard:
+- report missing: 7-7e.md
+- report changed since checked: 7-7a.md
+- S1 security
+counts: 1 findings, 1 to apply, 0 skipped
+finding: S1 Security — a token reaches the log — at: src/auth.sh:12 — fix: drop the log line — severity: high — rec: apply
+answer call:	7e	@TOP@/specs/x/reports/7-7e.md	@TOP@/specs/x/reports/7-7a.md	@TOP@/specs/x/reports/7-7b.md	@TOP@/specs/x/reports/7-7c.md	@TOP@/specs/x/reports/7-7d.md	sum=7-7a.md:@SUM@	sum=7-7b.md:@SUM@	sum=7-7c.md:@SUM@	sum=7-7d.md:@SUM@
