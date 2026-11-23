@@ -6,4 +6,6 @@ spawn: feat-planner
   effort: high
   report: @TOP@/specs/x/reports/3-plan-2.md
   continue: fresh
-boundary:	3	@TOP@/specs/x/reports/3-plan-2.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan-2.md
+boundary:	3	@TOP@/specs/x/reports/3-plan-2.md

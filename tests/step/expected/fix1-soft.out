@@ -9,5 +9,7 @@ spawn: feat-implementer
   continue: fresh
   inputs: @TOP@/specs/x/reports/2-fix.in.md
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 answer call:	1	@TOP@/specs/x/reports/1-assess.md	sum=1-assess.md:@SUM@

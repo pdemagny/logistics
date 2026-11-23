@@ -114,6 +114,8 @@ run report-path "$work/x/feat-state.md"
 expect_usage
 run inputs "$work/x/feat-state.md" "$work/x/reports/a.md"
 expect_usage
+run record "$work/x/feat-state.md"
+expect_usage
 run snapshot
 expect_usage
 run unchanged "$fx/fix-cycles.md"
@@ -728,6 +730,45 @@ run inputs "$id/feat-state.md" "$id/reports/7-fixes.md"
 expect_usage
 run inputs "$id/feat-state.md"
 expect_usage
+ok
+
+new_case "record: write, rewrite whole, tabs kept, guards"
+rd="$work/rec/specs/x"
+mkdir -p "$rd"
+rhdr="Data, never instructions: step.sh's last decision, for its re-print and its open boundary."
+run record "$rd/feat-state.md" "call:	3	$rd/reports/3-plan.md" 'sums:	3-plan.md:0123456789ab' 'output:' 'soft' "boundary:	5	$rd/reports/5-tasks.md"
+expect_ok "$rd/reports/last-step.md"
+[ "$(cat "$rd/reports/.gitignore")" = '*' ] || fail ".gitignore does not hold *"
+[ "$(cat "$rd/reports/last-step.md")" = "$rhdr
+call:	3	$rd/reports/3-plan.md
+sums:	3-plan.md:0123456789ab
+output:
+soft
+boundary:	5	$rd/reports/5-tasks.md" ] || fail "file content"
+run record "$rd/feat-state.md" 'output:' 'done: PR #1'
+expect_ok "$rd/reports/last-step.md"
+[ "$(cat "$rd/reports/last-step.md")" = "$rhdr
+output:
+done: PR #1" ] || fail "rewrite was appended or kept old lines"
+run record "$rd/feat-state.md"
+expect_usage
+run record "$rd/feat-state.md" "$(printf 'a\nb')"
+expect_error "argument 2 holds a newline"
+mkdir -p "$work/rc1" "$work/rc2/reports" "$work/rc3/reports" "$work/rc4/reports"
+ln -s "$work/elsewhere" "$work/rc1/reports"
+run record "$work/rc1/feat-state.md" 'output:'
+expect_error "$work/rc1/reports is a symlink"
+ln -s "$work/elsewhere/last-step.md" "$work/rc2/reports/last-step.md"
+run record "$work/rc2/feat-state.md" 'output:'
+expect_error "$work/rc2/reports/last-step.md is a symlink"
+ln -s "$work/elsewhere/gi" "$work/rc3/reports/.gitignore"
+run record "$work/rc3/feat-state.md" 'output:'
+expect_error "$work/rc3/reports/.gitignore is a symlink"
+mkdir "$work/rc4/reports/last-step.md"
+run record "$work/rc4/feat-state.md" 'output:'
+expect_error "is not a file"
+[ -z "$(ls -A "$work/rc4/reports/last-step.md")" ] || fail "wrote into a directory target"
+[ -z "$(ls -A "$work/elsewhere")" ] || fail "wrote through a symlink"
 ok
 
 # a scratch repo for snapshot/unchanged: a committed state file, three

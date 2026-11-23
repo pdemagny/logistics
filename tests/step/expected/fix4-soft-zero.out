@@ -10,5 +10,7 @@ spawn: feat-shipper
   continue: fresh
   security bug: no
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-ship.md
 boundary:	5	@TOP@/specs/x/reports/5-ship.md
 answer call:	4	@TOP@/specs/x/reports/4-7a+7b+7d.md	sum=4-7a+7b+7d.md:@SUM@

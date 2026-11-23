@@ -1,0 +1,14 @@
+reformat
+unparsable line: 2-specify.md: @TOP@/specs/x/spec.md
+spawn: feat-specifier
+  row: 2
+  mode: reformat
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/2-specify-2.md
+  continue: specifier
+  from: @TOP@/specs/x/reports/2-specify.md
+  unparsable: 2-specify.md: line 11 (Wrote) — not a "- " item at column 0
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify-2.md
+boundary:	2	@TOP@/specs/x/reports/2-specify-2.md

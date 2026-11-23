@@ -201,7 +201,8 @@ Code plugin.
    file>' setup`. It prints phase 1's spawn. Exit ≠ 0 before `S init`:
    show the script's last line and stop (exit 1 on a slug taken since
    step 2: run setup again). A `flag:` line it printed: log its value with
-   the next boundary call and flag it at the first gate.
+   your next own `step.sh` call (harness, Chores) and flag it at the first
+   gate.
 
 ## Resume
 
@@ -289,7 +290,9 @@ issue (user: "<words>")'` whenever the gate lists `security risk area`.
 
 When the gate passes (`soft`, or `answered` with phase 2's spawn),
 `step.sh` has set the size and title: issue creation, then the building
-move, then the spawn.
+move, then the spawn, all after the assessor's hand-back and before the
+implementer's spawn (no agent running). A failed move's `[!]` line goes
+with your next own `step.sh` call (harness, Chores).
 
 **Issue creation**, only once the gate has passed for a real bug:
 - `Issue:` holds the report's issue: create nothing. That issue always
@@ -366,7 +369,8 @@ approved commands (its `inputs:` file); add any environment or evidence the user
 
 ## 4. Code review
 
-Before the reviewers' spawns, the review move (see Board moves). The call
+The review move (see Board moves) is a tool call in the response that
+makes the reviewers' spawns (the tester's hand-back prints them). The call
 that prints them prepared the diff (`diff:` key; `added:` and `untracked,
 not in the diff:` lines; `diff file:`, the diff it wrote to the bug dir's
 `reports/review.diff`). Give each `feat-code-reviewer` the bug dir as
@@ -406,7 +410,8 @@ conventions call for and, through `ship.sh prepare` and `ship.sh
 publish`, commits `fix(<scope>)` with the trail, pushes and opens the PR,
 or reports `blocked` or `conflict`. Never merge.
 
-- `done: PR #N`: the final message.
+- `done: PR #N`: the final message, once the `done:` check (harness)
+  printed it, never from the shipper's block alone.
 - `stop: ship blocked on a command for you`: give the `command:` line to
   the user as is (`ship.sh` blocked here); the state file stays done
   (resume finds the run while its branch has no upstream).

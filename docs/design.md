@@ -184,8 +184,12 @@ too: `move.md`, read only when main moved under a run, and
 `rebase.md`, the `rebase` entry point of both skills, read only by a
 `rebase` run. The rules a script can apply (checking reports, deciding
 gates, merging review findings, the base check, model and effort) are in
-`.apm/skills/feat/scripts/step.sh`, which both coordinators call once at
-each phase boundary.
+`.apm/skills/feat/scripts/step.sh`, called once at each phase boundary:
+by the agent that closes a sequential boundary (it hands the output back
+for the coordinator to act on), and by the coordinator at setup, after a
+reviewer batch or a move, for an answer, when an agent's block slipped and
+for the `done:` check. A call already decided re-prints its decision and
+writes nothing, so a repeated call is safe.
 
 Agent frontmatter has no `model` or `effort` (`/feat` passes both on every
 spawn, as `step.sh` prints them from `sizes.tsv`) and limits tools with

@@ -1,0 +1,13 @@
+soft
+resume: 2 Specify
+phase2-mode: none
+spawn: feat-specifier
+  row: 2
+  mode: first
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/2-specify.md
+  continue: fresh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify.md
+boundary:	2	@TOP@/specs/x/reports/2-specify.md

@@ -7,4 +7,6 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	1	@TOP@/specs/x/reports/1-assess.md
 boundary:	1	@TOP@/specs/x/reports/1-assess.md

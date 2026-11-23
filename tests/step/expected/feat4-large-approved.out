@@ -7,4 +7,6 @@ spawn: feat-tasker
   effort: high
   report: @TOP@/specs/x/reports/5-tasks.md
   continue: fresh
-boundary:	5	@TOP@/specs/x/reports/5-tasks.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks.md
+boundary:	5	@TOP@/specs/x/reports/5-tasks.md

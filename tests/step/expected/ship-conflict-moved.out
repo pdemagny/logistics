@@ -8,4 +8,6 @@ spawn: feat-shipper
   report: @TOP@/specs/012-x/reports/8-ship-2.md
   continue: fresh
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/012-x/feat-state.md
+  boundary:	8	@TOP@/specs/012-x/reports/8-ship-2.md
 boundary:	8	@TOP@/specs/012-x/reports/8-ship-2.md

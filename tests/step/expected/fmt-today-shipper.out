@@ -9,4 +9,6 @@ spawn: feat-shipper
   continue: fresh
   from: @TOP@/specs/x/reports/8-ship.md
   unparsable: 8-ship.md: line 8 (Wrote) — text after a list header
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	8	@TOP@/specs/x/reports/8-ship-2.md
 boundary:	8	@TOP@/specs/x/reports/8-ship-2.md

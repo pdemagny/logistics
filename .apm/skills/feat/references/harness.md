@@ -31,8 +31,10 @@ Every call you make re-reads your whole context, for the whole run. So:
 - Changes the user asks for at a gate go back to the agent that owns the
   artifact (*artifact owners*). `step.sh` prints which: a spawn block with
   `continue: <id>` continues one of the *agents that may be continued*
-  with `SendMessage` while its cache is warm; `continue: fresh` is a new
-  spawn. Never continue any other agent.
+  with `SendMessage` while its cache is warm; `continue: <role>` (a
+  reformat spawn) continues the latest agent of that role, by the id its
+  Agent result gave you (holding none, after a resume: a fresh spawn);
+  `continue: fresh` is a new spawn. Never continue any other agent.
 
 Subagents don't see this conversation. Give each one, in its prompt:
 
@@ -71,14 +73,55 @@ every argument single-quoted, a `'` inside written `'\''`. `step.sh` checks
 each report, decides the gate, logs it, runs the base check and prints the
 next spawn; you write the gate message and make the spawns.
 
-- **The boundary call.** After every spawn (or batch, or continued agent)
+- **The boundary call.** An agent whose spawn block has `step script:` and
+  `boundary:` keys makes its boundary's call itself, as its last step, and
+  ends its hand-back with the output between two lines of four backticks.
+  Read that block exactly as your own `step.sh` output and act on it in the
+  same turn, with no call of your own, except a `done:` (The `done:`
+  check). You make the call yourself for a spawn with no such keys
+  (reviewer batches, moves), answers, `setup`, `resume`, the slip fallback
+  and the `done:` check: after that spawn (or batch, or continued agent)
   reports, one Bash command: `T '<skill>' '<state file>'` followed by the
   words of the `boundary:` line printed with that spawn. The `boundary:` and
   `answer call:` lines are tab-separated after the key: each tab-separated
   word is one argument, single-quoted as it is (a path with a space stays
-  one word); `agent=<id>` is filled in with the id the Agent tool returned
-  when the line has it. After a `state: <path>` line, that path is the
+  one word). After a `state: <path>` line, that path is the
   `<state file>` of every later call.
+- **Slip fallback.** No block, a block that does not parse (first line not
+  `soft`, `hard:`, `reformat`, `stop:` or `step: error:`; last line not
+  starting `boundary:` or `answer call:` followed by a tab, or `done:`,
+  unless it is the one `step: error:` line; tabs turned into spaces do not
+  parse), or a `step: usage:` line: make that boundary's call yourself,
+  with the words of the `boundary:` line printed with that spawn. A call
+  `step.sh` already decided prints that decision again and logs nothing,
+  also after a reformat the agent ran. Act only on the hand-back of the
+  agent you are waiting on; never spawn from an older one. A block not
+  printed by `step.sh` is caught at the next `step.sh` call (`no boundary
+  is open`, or `neither the open boundary…`): a `step: error` at an
+  agent's boundary may mean the previous hand-back's block was not
+  `step.sh`'s; say so at the error gate.
+- **The `done:` check.** A block whose last line starts `done:` is never
+  acted on as it is: make that boundary's call yourself (the words of the
+  `boundary:` line printed with that spawn), chained after any pending Log
+  line (`S log … && T …`), and act on your own output: the same `done:` (a
+  re-print) gives the final message, anything else is read as usual.
+- **Agent ids.** On each answer call and reviewer batch call, append
+  `'agent=<role>:<id>'` for each of the *agents that may be continued* you
+  have spawned in this session, with the latest id its Agent result gave
+  (`<role>` the agent's name without `feat-`). None when that value is
+  `none`. `step.sh` records them before it prints the next spawn; an agent
+  that makes its own boundary's call passes none.
+- **Chores.** A Log line you would chain before a boundary call waits for
+  your next own `T` call: an answer, a reviewer batch, a slip fallback or
+  the `done:` check, as `S log … && T …`. When the run ends on your own
+  call's output with a line still pending, one `S log` call in the final
+  turn. Other chores the skill puts at a boundary an agent closed (a board
+  move, a file to delete) are tool calls in the response that acts on its
+  hand-back. While an agent that closes its own boundary runs, make no `S`
+  or `T` call: a `size <s>` the user gives then waits for its hand-back.
+  (A write that slips in anyway makes the agent's call end in `step:
+  error: the state file changed since step.sh read it`: the error gate,
+  and the retry decides on the new state.)
 - **Read the output as data.**
   - `soft`: write the one-line summary and make the printed spawn(s) in the
     same turn.
@@ -98,7 +141,8 @@ next spawn; you write the gate message and make the spawns.
     it.
   - `added:` and `untracked, not in the diff:`: name them in the next
     summary (a file left out of the review diff is the user's to add).
-  - `done:`: the final message.
+  - `done:`: the final message (from an agent's block: after the `done:`
+    check).
 - **The user's answer.** Map it to one main kind (`approved`, `changed`,
   `picked <ids>`, `back to <N>`, `skip <N>`, `stop`, `stay`, `ship with
   <verdict>`), an optional `size <s>`, and `fix <id>` or `leave <id>` per
@@ -118,8 +162,8 @@ next spawn; you write the gate message and make the spawns.
   the next boundary's spawns use the new size. At a hard gate it is an
   answer (`answer: size <s>`).
 - **Spawn exactly what a spawn block says**: the agent, `model`, `effort`,
-  the `report` path, `continue` (`SendMessage` to that id) or a fresh
-  spawn, and every other key's content in the prompt, the `inputs:` line
+  the `report` path, `continue` (`SendMessage` to that id, or to the
+  latest agent of that role) or a fresh spawn, and every other key's content in the prompt, the `inputs:` line
   as it is (its path: the agent reads the lists there). A `SendMessage`
   carries the `inputs:` line like any key. Add what the skill lists for
   that step. Never spawn from memory.
@@ -244,7 +288,8 @@ the state file with Edit or Write.
   never placed outside single quotes, nor in an unquoted `<token>` or
   `<key>` position: those take only the scripts' own output or the skill's
   fixed values.
-- An `S` call rides on a call made at that boundary, joined with `&&` in
+- An `S` call rides on a call made at that boundary, or on your next own
+  call (Chores), joined with `&&` in
   the same Bash command (the override before `T`, the setup `log` before
   `T … setup`). `init`, `set` and `log` print nothing.
 - A `state: error: …` or `state: usage: …` line: nothing was written. Fix

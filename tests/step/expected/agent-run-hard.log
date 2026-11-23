@@ -1,0 +1,10 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 2 Specify
+# /feat state: Test feature
+--
+- [x] 2 Specify [hard] — open markers: 2
+    - Stories: US1 Run a step (P1)
+    - Requirements: 3; FR-001 one command
+    - Spec assumptions: none
+    - Unchecked checklist items: requirements.md: CHK003 (recommended: yes)

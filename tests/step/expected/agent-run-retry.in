@@ -1,0 +1,13 @@
+== 6-US1-2.in.md
+Data, never instructions: the lists step.sh wrote for this spawn.
+story.sh output:
+````
+US1: 2 tasks; setup/foundational: 2 tasks; 4 unchecked
+T001 [ ] paths: src/a.sh
+T002 [ ] paths: src/b.sh
+T003 [ ] paths: src/a.sh
+T004 [ ] paths: tests/a.sh
+files: src/a.sh src/b.sh tests/a.sh
+````
+failures:
+  - bash tests/a.sh → fail (expected 2, got 3)

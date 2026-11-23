@@ -9,7 +9,9 @@ spawn: feat-specifier
   effort: low
   report: @TOP@/specs/x/reports/2-specify.md
   continue: fresh
-boundary:	2	@TOP@/specs/x/reports/2-specify.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify.md
+boundary:	2	@TOP@/specs/x/reports/2-specify.md
 # feat 3 Plan small
 soft
 resume: 3 Plan
@@ -22,7 +24,9 @@ spawn: feat-planner
   effort: low
   report: @TOP@/specs/x/reports/3-plan.md
   continue: fresh
-boundary:	3	@TOP@/specs/x/reports/3-plan.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan.md
+boundary:	3	@TOP@/specs/x/reports/3-plan.md
 # feat 5 Tasks small
 soft
 resume: 5 Tasks
@@ -35,7 +39,9 @@ spawn: feat-tasker
   effort: low
   report: @TOP@/specs/x/reports/5-tasks.md
   continue: fresh
-boundary:	5	@TOP@/specs/x/reports/5-tasks.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks.md
+boundary:	5	@TOP@/specs/x/reports/5-tasks.md
 # feat 6 Implement small
 soft
 resume: 6 Implement
@@ -51,6 +57,8 @@ spawn: feat-implementer
   who: US1
   story: US1
   inputs: @TOP@/specs/x/reports/6-US1.in.md
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US1.md
 boundary:	6	@TOP@/specs/x/reports/6-US1.md
 # feat done (shipping) small
 soft
@@ -65,6 +73,8 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	8	@TOP@/specs/x/reports/8-ship.md
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess small
 soft
@@ -78,6 +88,8 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	1	@TOP@/specs/x/reports/1-assess.md
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix small
 soft
@@ -92,6 +104,8 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test small
 soft
@@ -107,6 +121,8 @@ spawn: feat-bug-assessor
   continue: fresh
   cycle: first
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-test.md
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) small
 soft
@@ -122,6 +138,8 @@ spawn: feat-shipper
   continue: fresh
   security bug: no
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-ship.md
 boundary:	5	@TOP@/specs/x/reports/5-ship.md
 # feat 2 Specify medium
 soft
@@ -134,7 +152,9 @@ spawn: feat-specifier
   effort: medium
   report: @TOP@/specs/x/reports/2-specify.md
   continue: fresh
-boundary:	2	@TOP@/specs/x/reports/2-specify.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify.md
+boundary:	2	@TOP@/specs/x/reports/2-specify.md
 # feat 3 Plan medium
 soft
 resume: 3 Plan
@@ -147,7 +167,9 @@ spawn: feat-planner
   effort: medium
   report: @TOP@/specs/x/reports/3-plan.md
   continue: fresh
-boundary:	3	@TOP@/specs/x/reports/3-plan.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan.md
+boundary:	3	@TOP@/specs/x/reports/3-plan.md
 # feat 5 Tasks medium
 soft
 resume: 5 Tasks
@@ -160,7 +182,9 @@ spawn: feat-tasker
   effort: medium
   report: @TOP@/specs/x/reports/5-tasks.md
   continue: fresh
-boundary:	5	@TOP@/specs/x/reports/5-tasks.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks.md
+boundary:	5	@TOP@/specs/x/reports/5-tasks.md
 # feat 6 Implement medium
 soft
 resume: 6 Implement
@@ -176,6 +200,8 @@ spawn: feat-implementer
   who: US1
   story: US1
   inputs: @TOP@/specs/x/reports/6-US1.in.md
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US1.md
 boundary:	6	@TOP@/specs/x/reports/6-US1.md
 # feat done (shipping) medium
 soft
@@ -190,6 +216,8 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	8	@TOP@/specs/x/reports/8-ship.md
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess medium
 soft
@@ -203,6 +231,8 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	1	@TOP@/specs/x/reports/1-assess.md
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix medium
 soft
@@ -217,6 +247,8 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test medium
 soft
@@ -232,6 +264,8 @@ spawn: feat-bug-assessor
   continue: fresh
   cycle: first
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-test.md
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) medium
 soft
@@ -247,6 +281,8 @@ spawn: feat-shipper
   continue: fresh
   security bug: no
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-ship.md
 boundary:	5	@TOP@/specs/x/reports/5-ship.md
 # feat 2 Specify large
 soft
@@ -259,7 +295,9 @@ spawn: feat-specifier
   effort: high
   report: @TOP@/specs/x/reports/2-specify.md
   continue: fresh
-boundary:	2	@TOP@/specs/x/reports/2-specify.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-specify.md
+boundary:	2	@TOP@/specs/x/reports/2-specify.md
 # feat 3 Plan large
 soft
 resume: 3 Plan
@@ -272,7 +310,9 @@ spawn: feat-planner
   effort: high
   report: @TOP@/specs/x/reports/3-plan.md
   continue: fresh
-boundary:	3	@TOP@/specs/x/reports/3-plan.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-plan.md
+boundary:	3	@TOP@/specs/x/reports/3-plan.md
 # feat 5 Tasks large
 soft
 resume: 5 Tasks
@@ -285,7 +325,9 @@ spawn: feat-tasker
   effort: high
   report: @TOP@/specs/x/reports/5-tasks.md
   continue: fresh
-boundary:	5	@TOP@/specs/x/reports/5-tasks.md	agent=<id>
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks.md
+boundary:	5	@TOP@/specs/x/reports/5-tasks.md
 # feat 6 Implement large
 soft
 resume: 6 Implement
@@ -301,6 +343,8 @@ spawn: feat-implementer
   who: US1
   story: US1
   inputs: @TOP@/specs/x/reports/6-US1.in.md
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US1.md
 boundary:	6	@TOP@/specs/x/reports/6-US1.md
 # feat done (shipping) large
 soft
@@ -315,6 +359,8 @@ spawn: feat-shipper
   report: @TOP@/specs/x/reports/8-ship.md
   continue: fresh
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	8	@TOP@/specs/x/reports/8-ship.md
 boundary:	8	@TOP@/specs/x/reports/8-ship.md
 # fix 1 Assess large
 soft
@@ -328,6 +374,8 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	1	@TOP@/specs/x/reports/1-assess.md
 boundary:	1	@TOP@/specs/x/reports/1-assess.md
 # fix 2 Fix large
 soft
@@ -342,6 +390,8 @@ spawn: feat-implementer
   report: @TOP@/specs/x/reports/2-fix.md
   continue: fresh
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
 boundary:	2	@TOP@/specs/x/reports/2-fix.md
 # fix 3 Test large
 soft
@@ -357,6 +407,8 @@ spawn: feat-bug-assessor
   continue: fresh
   cycle: first
   trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-test.md
 boundary:	3	@TOP@/specs/x/reports/3-test.md
 # fix done (shipping) large
 soft
@@ -372,4 +424,6 @@ spawn: feat-shipper
   continue: fresh
   security bug: no
   ship script: @SKILL@/scripts/ship.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-ship.md
 boundary:	5	@TOP@/specs/x/reports/5-ship.md

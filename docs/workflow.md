@@ -20,12 +20,20 @@ holds a size table or a gate table: `step.sh` applies them.
 - **Coordinator**: the session running `/feat`, started from a clean
   context. It holds every gate and changes only `feat-state.md`, through
   the `state.sh` and `step.sh` scripts (never by hand); it never reads
-  code, report files, runs checks or edits artifacts. At each phase
-  boundary it makes one Bash call,
+  code, report files, runs checks or edits artifacts. Each phase boundary
+  is one call to
   [`step.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/step.sh),
   which checks the agents' reports, decides the gate, logs it, runs the
   base check and prints the next spawn with its model and effort; the
-  coordinator writes the gate message and makes the spawn. Setup is two
+  coordinator writes the gate message and makes the spawn. An agent that
+  closes a sequential boundary (the specifier, planner, tasker, each
+  implementer, the shipper) runs that call itself, as its last step, and
+  hands the output back in a block the coordinator acts on as its own.
+  The coordinator calls `step.sh` itself at setup, after each reviewer
+  batch, for each answer at a hard gate, after a move, when an agent's
+  block slipped (missing or unreadable: the same call again, which
+  re-prints a decision already made and logs nothing) and for the `done:`
+  check after the shipper. Setup is two
   calls to
   [`preflight.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/preflight.sh)
   around `EnterWorktree` (0 Setup). Every call it makes re-reads its whole
@@ -92,6 +100,29 @@ summary.
 From phase 3 on, `step.sh` starts each phase with the base check (see
 [When main moves](#when-main-moves)): silent when main has not moved; a
 move is listed at the next gate, or stops there when it needs your call.
+
+### A small run, call by call
+
+The coordinator's own `step.sh` calls on a small feature, main not moving:
+
+- **Setup**: one call, chained with `preflight.sh feat worktree` and
+  `state.sh init`; it prints the specifier's spawn.
+- **Specifier, planner**: none. Each runs its boundary's call and hands
+  back the next spawn (a hard phase 2 adds one answer call).
+- **Design review batch**: one call when the reviewers have reported.
+- **Its gate**: one answer call when it is hard; none when soft.
+- **Tasker, each story**: none; the last story's block prints the code
+  reviewers' spawns.
+- **Code review batch**: one call (plus one for 7e on medium); a hard
+  gate adds one answer call.
+- **Review fixes, shipper**: none.
+- **`done:`**: one check call, the shipper's boundary words again; it
+  re-prints `done: PR #N`, which gives the final message.
+
+So a small run with one hard gate costs the coordinator five `step.sh`
+calls: setup, two batches, one answer and the `done:` check. A Log line it
+would write meanwhile (a flag, a brief left in place) rides on the next of
+those calls.
 
 ## Size × phase matrix
 
@@ -387,14 +418,15 @@ stays soft for it. A later implementer of the story retries those checks
 instead of redoing the tasks.
 
 ### 7 Code review (`feat-code-reviewer`)
-With [board tracking](#board-tracking) the coordinator first moves the issue
-to In review. `step.sh` then makes the uncommitted work reviewable (`git add -N` on new
+The last story's `step.sh` call, run by its implementer, makes the
+uncommitted work reviewable (`git add -N` on new
 files, `git diff` against `git merge-base origin/<default> HEAD`; a
 `...HEAD` diff would be empty), writes that diff to
 `<artifact dir>/reports/review.diff` (never committed, rewritten at each
 review, not written when the diff is empty), and prints the reviewers'
-spawns with their lenses and the file under `diff file:`. Each reviewer
-reads the file instead of running git to find the diff (`/tiny`'s
+spawns with their lenses and the file under `diff file:`. With [board
+tracking](#board-tracking) the coordinator moves the issue to In review in
+the response that makes those spawns. Each reviewer reads the file instead of running git to find the diff (`/tiny`'s
 reviewer, with no file, runs the `diff:` command), and still reads the
 tree to verify its findings:
 - **7a Correctness, spec, standards**: three separate passes. Standards:
@@ -656,7 +688,12 @@ reviewer groups are `sizes.json`'s `fix` part.
   and `step.sh`), never reads
   code, report files or runs checks; it
   quotes a line of assessment.md, fix.md or test.md only when you must
-  decide on it. Setup is two `preflight.sh` calls around `EnterWorktree`:
+  decide on it. The calls to `step.sh` split as in `/feat`: the assessor
+  (assess and test), the implementer (fix and review fixes) and the
+  shipper each run their boundary's call and hand the output back; the
+  coordinator calls it at setup, after the review batch, for each answer,
+  after a move, when an agent's block slipped and for the `done:` check
+  after the shipper. Setup is two `preflight.sh` calls around `EnterWorktree`:
   the first classifies the argument, checks the install and the bug
   extension, runs the board check, fetches the default branch, reads the
   hooks as data, reads an issue's title and its author's association, and
@@ -718,7 +755,10 @@ with the base check of [When main moves](#when-main-moves).
   you approve it, and only an `OWNER`, `MEMBER` or `COLLABORATOR` of this
   repo's issue (or you, for a typed symptom) counts as trusted. A security bug is always hard: it
   suggests a private security advisory instead of an issue and states the
-  repo's visibility.
+  repo's visibility. The assessor makes this boundary's `step.sh` call
+  itself, so the gate (or phase 2's spawn) arrives in its hand-back;
+  issue creation and the building move follow it, before the
+  implementer's spawn.
 - **Fix** turns hard on deviations from the assessment (handled like a size
   increase: one size step up, or "back to 1"), a failing check, or a status
   other than `applied`.

@@ -2,7 +2,7 @@
 
 - Branch: feat-x Worktree: @TOP@
 - Size: small
-- Agents: specifier x1, planner x1, tasker x1 (for SendMessage)
+- Agents: none (every spawn is fresh)
 - Current phase: done (PR #42)
 - Conventions: none
 - Allowed Spec Kit hooks: none

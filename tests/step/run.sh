@@ -389,9 +389,9 @@ check resume-fix-1 0
 
 # --- /feat 2 -------------------------------------------------------------------------------
 
-new_case "feat 2 soft, agent id on the Agents line" feat
+new_case "feat 2 soft" feat
 put specifier/soft 2-specify
-run feat "$sf" 2 "$R" 'agent=a5e3e65997ed02c4b'
+run feat "$sf" 2 "$R"
 check feat2-soft 0
 
 new_case "feat 2 hard, then approved with open markers: amend" feat
@@ -497,15 +497,15 @@ check retry-snapshot-retried 0
 [ "$out" = "$(cat "$ex/feat3-medium.out")" ] || fail "the retry's spawns differ from feat3-medium's"
 [ "$(grep -c '^- \[x\] 3 Plan — merged with 4' "$sf")" = 1 ] || fail "the 3 Plan line was logged twice"
 
-# a soft gate line written, then a set failed: the retry logs it once and
-# the Agents line set before the failure was put back, then set again
+# a soft gate line written, then a set failed: the retry logs it once (the
+# Agents line put back on a failed set: "ids on an answer call" below)
 new_case "retry: Current phase failed to set after a soft 2 gate line" feat
 put specifier/soft 2-specify
 fail_once "'set:Current phase'"
-run feat "$sf" 2 "$R" 'agent=a5e3e65997ed02c4b'
+run feat "$sf" 2 "$R"
 unfail
 check retry-set-failed 1
-run feat "$sf" 2 "$R" 'agent=a5e3e65997ed02c4b'
+run feat "$sf" 2 "$R"
 check retry-set-retried 0
 [ "$out" = "$(cat "$ex/feat2-soft.out")" ] || fail "the retry's output differs from feat2-soft's"
 [ "$(grep -c '^- \[x\] 2 Specify \[soft\]' "$sf")" = 1 ] || fail "the 2 Specify gate was logged twice"
@@ -517,7 +517,7 @@ S set Size small
 S set 'Current phase' '5 Tasks'
 S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
 put tasker/match 5-tasks
-run feat "$sf" 5 "$R" 'agent=t9'
+run feat "$sf" 5 "$R"
 check feat5-soft 0
 
 new_case "feat 5 medium to small: a decrease" feat
@@ -1282,7 +1282,7 @@ put design-reviewer/4a+4b+4c-apply 4-4a+4b+4c
 run feat "$sf" "${CALL[@]}"
 check feat4-soft-apply 0
 put planner/plain 3-plan
-run feat "$sf" 3 "$R" 'agent=p1'
+run feat "$sf" 3 "$R"
 check feat4-soft-amended 0
 S set 'Current phase' '7 Code review'
 S log '- [x] 7 Code review [soft] — auto-applied none; skipped B1 (reviewer: "cosmetic")' '    - B1 src/a.sh:3 — a stray space — rec: skip (cosmetic)'
@@ -1345,6 +1345,9 @@ check fixes-pass 0
 
 merge_case "merge-rule-3: two reviewers disagree on one spot" 7a+7b-rule3
 put code-reviewer/7a-rule3 7-7a
+# a third report the batch never issued: the record is dropped so the call is
+# judged as on a run started before it (allowed_tokens alone)
+command rm -f "$rd/last-step.md"
 run feat "$sf" 7 "${CALL[1]}" "$rd/7-7a.md" "${CALL[2]}" "${CALL[3]}"
 check merge-rule-3 0
 
@@ -1946,7 +1949,6 @@ full_go() {
       i=$((i + 1))
       put_at "${!i}" "$w"
     fi
-    if [ "$w" = 'agent=<id>' ]; then w=agent=x1; fi
     a+=("$w")
   done
   [ "$i" = "$#" ] || fail "$# fixtures for $i new reports"
@@ -2178,6 +2180,343 @@ out="${all%$'\n'}"
 rc=0
 before="$(grep -c '' "$sf")"
 check rows-per-size 0
+
+# --- agents run step.sh last (contracts/step-cli.md, Tests) ---------------------------------
+# An agent-run spawn's block ends with `step script:` and `boundary:`, the
+# call the agent makes itself; the coordinator acts on the output it hands
+# back, and checks a done: with the same call again (a re-print).
+
+# own_keys <token> <report>: raw's last spawn block ends with the two keys,
+# the same words as the call line printed after the blocks
+own_keys() {
+  local want_s want_b
+  want_s="  step script:	$step	feat	$sf"
+  want_b="$1	$2"
+  printf '%s\n' "$raw" | grep -qxF "$want_s" || fail "no step script: key"
+  printf '%s\n' "$raw" | grep -qxF "  boundary:	$want_b" || fail "no boundary: key"
+  printf '%s\n' "$raw" | grep -qxF "boundary:	$want_b" || fail "no boundary: line"
+  [ "$(printf '%s\n' "$raw" | grep -B2 -xF "boundary:	$want_b" | head -n 2)" = "$want_s
+  boundary:	$want_b" ] || fail "the two keys are not the last block's last keys"
+}
+
+new_case "agent-run soft: the planner closes its own boundary" feat
+run feat "$sf" setup
+own_keys 2 "$rd/2-specify.md"
+call_line boundary
+put_at specifier/soft "${CALL[1]}"
+run feat "$sf" "${CALL[@]}"
+check agent-run-soft 0
+own_keys 3 "$rd/3-plan.md"
+grep -qxF -- '- Agents: none (every spawn is fresh)' "$sf" || fail "the Agents line changed"
+[ "$(sed -n 2p "$rd/last-step.md")" = "call:	2	$rd/2-specify.md" ] || fail "last-step.md: no call: line"
+sums_re=$'^sums:\t2-specify\\.md:[0-9a-f]{12}$'
+[[ "$(sed -n 3p "$rd/last-step.md")" =~ $sums_re ]] || fail "last-step.md: no sums: line"
+[ "$(sed -n 4p "$rd/last-step.md")" = output: ] || fail "last-step.md: no output: line"
+[ "$(tail -n +5 "$rd/last-step.md")" = "$raw" ] || fail "last-step.md: the output differs from stdout"
+
+new_case "agent-run hard: an open marker, the answer call last" feat
+run feat "$sf" setup
+call_line boundary
+put_at specifier/markers "${CALL[1]}"
+run feat "$sf" "${CALL[@]}"
+check agent-run-hard 0
+[ "${out%%$'\n'*}" = 'hard:' ] || fail "not a hard gate"
+[[ "$(printf '%s\n' "$raw" | tail -n 1)" == "answer call:	"* ]] || fail "the answer call is not last"
+
+feat6 "agent-run failed check: the retry spawn closes its own boundary" medium
+run resume "$sf"
+call_line boundary
+put_at implementer/story-fail "${CALL[1]}"
+run feat "$sf" "${CALL[@]}"
+check agent-run-retry 0
+[ "${out%%$'\n'*}" = soft ] || fail "not soft"
+own_keys 6 "$rd/6-US1-2.md"
+grep -qx 'failures:' "$rd/6-US1-2.in.md" || fail "no failures in the retry's inputs file"
+
+# the done: check last: its re-print needs the acceptance of a decided call
+new_case "agent-run done: the coordinator's check re-prints it" feat
+S set 'Current phase' 'done (shipping)'
+S log '- [x] 6 US1 — not verified: none'
+run resume "$sf"
+own_keys 8 "$rd/8-ship.md"
+call_line boundary
+put_at shipper/pr "${CALL[1]}"
+run feat "$sf" "${CALL[@]}"
+check agent-run-done 0
+[ "$(printf '%s\n' "$out" | tail -n 1)" = 'done: PR #42' ] || fail "not shipped"
+first="$raw"
+command cp -f "$sf" "$work/done-sf.keep"
+command cp -f "$rd/last-step.md" "$work/done-rec.keep"
+run feat "$sf" "${CALL[@]}"
+[ "$rc" = 0 ] || fail "the done: check: exit $rc, want 0"
+[ "$raw" = "$first" ] || fail "the done: check did not re-print the decision byte for byte"
+cmp -s "$sf" "$work/done-sf.keep" || fail "the done: check changed the state file"
+cmp -s "$rd/last-step.md" "$work/done-rec.keep" || fail "the done: check changed last-step.md"
+
+# a renumbered ship: the shipper's call names the old state file and report
+# path; the coordinator's done: check passes the state: path with the same
+# report path (its boundary: words) and re-prints the decision
+new_case "agent-run done after a renumber: the check with the state: path re-prints it" feat
+S set 'Current phase' 'done (shipping)'
+S log '- [x] 6 US1 — not verified: none'
+run resume "$sf"
+call_line boundary
+put_at shipper/pr "${CALL[1]}"
+sed -i "s#$top/specs/x/#$top/specs/012-x/#g" "$R"
+mv "$top/specs/x" "$top/specs/012-x"
+old_sf="$sf"
+sf="$top/specs/012-x/feat-state.md"
+rd="$top/specs/012-x/reports"
+run feat "$old_sf" "${CALL[@]}"
+[ "$rc" = 0 ] || fail "the shipper's call: exit $rc, want 0"
+printf '%s\n' "$raw" | grep -qxF "state: $sf" || fail "no state: line"
+[ "$(printf '%s\n' "$out" | tail -n 1)" = 'done: PR #42' ] || fail "not shipped"
+first="$raw"
+command cp -f "$sf" "$work/rn-sf.keep"
+command cp -f "$rd/last-step.md" "$work/rn-rec.keep"
+run feat "$sf" "${CALL[@]}"
+[ "$rc" = 0 ] || fail "the done: check: exit $rc, want 0"
+[ "$raw" = "$first" ] || fail "the done: check did not re-print the decision byte for byte"
+cmp -s "$sf" "$work/rn-sf.keep" || fail "the done: check changed the state file"
+cmp -s "$rd/last-step.md" "$work/rn-rec.keep" || fail "the done: check changed last-step.md"
+
+# --- the acceptance of a boundary call (contracts/step-cli.md, Acceptance) -----------------
+
+# agent_run_2: setup, then the specifier's soft report at the issued path and
+# its call (case 1); CALL2 = that call's words, FIRST = its stdout
+agent_run_2() {
+  new_case "$1" feat
+  run feat "$sf" setup
+  call_line boundary
+  CALL2=("${CALL[@]}")
+  put_at specifier/soft "${CALL2[1]}"
+  run feat "$sf" "${CALL2[@]}"
+  [ "$rc" = 0 ] || fail "boundary 2: exit $rc, want 0"
+  FIRST="$raw"
+}
+
+agent_run_2 "re-print: the same call again writes nothing"
+command cp -f "$sf" "$work/rp-sf.keep"
+command cp -f "$rd/last-step.md" "$work/rp-rec.keep"
+run feat "$sf" "${CALL2[@]}"
+[ "$rc" = 0 ] || fail "the re-print: exit $rc, want 0"
+[ "$raw" = "$FIRST" ] || fail "the re-print differs from the decision byte for byte"
+cmp -s "$sf" "$work/rp-sf.keep" || fail "the re-print changed the state file"
+cmp -s "$rd/last-step.md" "$work/rp-rec.keep" || fail "the re-print changed last-step.md"
+
+new_case "not issued: a token or a report path the last decision did not print" feat
+run feat "$sf" setup
+command cp -f "$rd/last-step.md" "$work/ni-rec.keep"
+put planner/plain 3-plan
+run feat "$sf" 3 "$R"
+check agent-run-not-issued-token 1
+put specifier/soft 2-specify-2
+run feat "$sf" 2 "$R"
+check agent-run-not-issued-path 1
+cmp -s "$rd/last-step.md" "$work/ni-rec.keep" || fail "an error changed last-step.md"
+
+feat6 "stale: an edited report, then an older token" medium
+put implementer/story-pass 6-US1
+run feat "$sf" 6 "$R"
+[ "$rc" = 0 ] || fail "US1: exit $rc, want 0"
+us1="$R"
+command cp -f "$us1" "$work/us1.keep"
+printf 'an edit\n' >>"$us1"
+run feat "$sf" 6 "$us1"
+check agent-run-stale-edited 1
+command cp -f "$work/us1.keep" "$us1"
+put implementer/story-clean 6-US2
+run feat "$sf" 6 "$R"
+[ "$rc" = 0 ] || fail "US2: exit $rc, want 0"
+run feat "$sf" 6 "$us1"
+check agent-run-stale-older 1
+
+# reformat_2: setup, then an unparsable specifier report at the issued path
+# and its call: reformat. CALL1 = that call's words, CALLR = the reformat
+# block's boundary: words (its report: path first)
+reformat_2() {
+  new_case "$1" feat
+  run feat "$sf" setup
+  call_line boundary
+  CALL1=("${CALL[@]}")
+  put_at specifier/today-layout "${CALL1[1]}"
+  run feat "$sf" "${CALL1[@]}"
+}
+
+reformat_2 "reformat run by the agent: its call decides, the first call re-prints it"
+check agent-run-reformat 0
+[ "${out%%$'\n'*}" = reformat ] || fail "not a reformat"
+call_line boundary
+CALLR=("${CALL[@]}")
+own_keys 2 "${CALLR[1]}"
+printf '%s\n' "$raw" | grep -qxF "  report: ${CALLR[1]}" || fail "the boundary: words do not name the block's report: path"
+put_at specifier/soft "${CALLR[1]}"
+run feat "$sf" "${CALLR[@]}"
+check agent-run-reformat-soft 0
+[ "${out%%$'\n'*}" = soft ] || fail "the corrected report: not soft"
+[ "$(grep -c '^call:	' "$rd/last-step.md")" = 2 ] || fail "last-step.md does not hold two call: lines"
+[ "$(sed -n 2p "$rd/last-step.md")" = "call:	2	${CALL1[1]}" ] || fail "last-step.md: the first call: line is not the first call's"
+second="$raw"
+command cp -f "$sf" "$work/rf2-sf.keep"
+command cp -f "$rd/last-step.md" "$work/rf2-rec.keep"
+run feat "$sf" "${CALL1[@]}"
+[ "$rc" = 0 ] || fail "the slip fallback: exit $rc, want 0"
+[ "$raw" = "$second" ] || fail "the first call's words did not re-print the decision byte for byte"
+cmp -s "$sf" "$work/rf2-sf.keep" || fail "the re-print changed the state file"
+cmp -s "$rd/last-step.md" "$work/rf2-rec.keep" || fail "the re-print changed last-step.md"
+
+reformat_2 "reformat run by the agent: a second slip is today's hard gate"
+[ "${out%%$'\n'*}" = reformat ] || fail "not a reformat"
+call_line boundary
+put_at specifier/today-layout "${CALL[1]}"
+run feat "$sf" "${CALL[@]}"
+check agent-run-reformat-hard 0
+[ "${out%%$'\n'*}" = 'hard:' ] || fail "a second slip: not a hard gate"
+
+new_case "record: the write fails, the retry decides as the first try" feat
+run feat "$sf" setup
+call_line boundary
+put_at specifier/soft "${CALL[1]}"
+command cp -f "$rd/last-step.md" "$work/rf-rec.keep"
+fail_once "'record:'*"
+run feat "$sf" "${CALL[@]}"
+unfail
+check agent-run-record-failed 1
+grep -qxF -- '- Current phase: 2 Specify' "$sf" || fail "Current phase not put back"
+cmp -s "$rd/last-step.md" "$work/rf-rec.keep" || fail "the failed write changed last-step.md"
+run feat "$sf" "${CALL[@]}"
+check agent-run-record-retried 0
+[ "$out" = "$(cat "$ex/agent-run-soft.out")" ] || fail "the retry's output differs from agent-run-soft's"
+[ "$(grep -c '^- \[x\] 2 Specify \[soft\]' "$sf")" = 1 ] || fail "the 2 Specify gate was logged twice"
+
+# changed: a second writer logs a line while the decision runs (at its
+# report-path call); the commit refuses, nothing of the decision written
+new_case "changed: the state file changed during the call" feat
+run feat "$sf" setup
+call_line boundary
+put_at specifier/soft "${CALL[1]}"
+command cp -f "$rd/last-step.md" "$work/ch-rec.keep"
+command cp -f "$skill/scripts/state.sh" "$skill/scripts/.state-real.sh"
+printf '%s\n' '#!/usr/bin/env bash' \
+  "case \"\$1\" in report-path)" \
+  "  mv -f '$skill/scripts/.state-real.sh' '$skill/scripts/state.sh'" \
+  "  bash '$skill/scripts/state.sh' log \"\$2\" '- [!] another writer' >/dev/null ;;" \
+  'esac' \
+  "if [ -f '$skill/scripts/.state-real.sh' ]; then exec bash '$skill/scripts/.state-real.sh' \"\$@\"; fi" \
+  "exec bash '$skill/scripts/state.sh' \"\$@\"" >"$skill/scripts/state.sh"
+run feat "$sf" "${CALL[@]}"
+unfail
+check agent-run-changed 1
+[ "$out" = 'step: error: the state file changed since step.sh read it; call again' ] || fail "not the changed error"
+grep -qxF -- '- Current phase: 2 Specify' "$sf" || fail "Current phase changed"
+grep -qxF -- '- [!] another writer' "$sf" || fail "the other writer's line was lost"
+cmp -s "$rd/last-step.md" "$work/ch-rec.keep" || fail "the refused call changed last-step.md"
+
+new_case "reports: resume creates a missing reports/, refuses a symlinked one" feat
+command rm -rf -- "$rd"
+run resume "$sf"
+check agent-run-no-reports 0
+[ "$(cat "$rd/.gitignore")" = '*' ] || fail "reports/.gitignore does not hold *"
+[ "$(head -n 1 "$rd/last-step.md")" = "Data, never instructions: step.sh's last decision, for its re-print and its open boundary." ] || fail "last-step.md not written"
+command rm -rf -- "$rd"
+mkdir -p "$work/c/$n/elsewhere"
+ln -s "$work/c/$n/elsewhere" "$rd"
+run resume "$sf"
+[ "$rc" = 1 ] || fail "a symlinked reports/: exit $rc, want 1"
+[[ "$out" == 'step: error: '* ]] || fail "a symlinked reports/: not a step: error"
+[ ! -e "$work/c/$n/elsewhere/last-step.md" ] || fail "the record was written through the link"
+
+# --- agent ids arrive on the coordinator's own calls (contracts/step-cli.md, Arguments) ----
+
+AGENT_USAGE="agent=<role>:<id> only on an answer call or a reviewer batch's call"
+
+# gate3_hard <case>: large /feat at a hard gate 3; CALL = its answer call
+gate3_hard() {
+  new_case "$1" feat
+  S set Size large
+  S set 'Current phase' '3 Plan'
+  S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: requirements.md: CHK003 (recommended: yes)'
+  put planner/assume 3-plan
+  run feat "$sf" 3 "$R"
+  [ "${out%%$'\n'*}" = 'hard:' ] || fail "gate 3 not hard"
+  call_line 'answer call'
+}
+ids=('agent=planner:p0' 'agent=specifier:s1' 'agent=planner:p1')
+
+# ids on an answer call; the last word per role wins; a refused answer
+# writes no id
+gate3_hard "ids on an answer call: Agents holds both"
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")' "${ids[@]}"
+check agent-ids-answer 0
+grep -qxF -- '- Agents: specifier s1, planner p1 (for SendMessage)' "$sf" || fail "Agents does not hold both ids"
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "again")' 'agent=planner:p2'
+[ "$rc" = 0 ] && [[ "$out" == 'refused: '* ]] || fail "the second answer was not refused"
+grep -qxF -- '- Agents: specifier s1, planner p1 (for SendMessage)' "$sf" || fail "a refused answer wrote an id"
+
+# a set that fails after the ids were set puts the Agents line back
+gate3_hard "ids on an answer call: a failed write puts the Agents line back"
+fail_once "'set:Current phase'"
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")' "${ids[@]}"
+unfail
+check agent-ids-answer-failed 1
+grep -qxF -- '- Agents: none (every spawn is fresh)' "$sf" || fail "the Agents line was not put back"
+
+review_case "ids on a reviewer batch call: the amend continues the planner" feat medium '4 Design review' "$P2_SOFT" "$P2_NONE" "$P3_FACTS"
+put design-reviewer/4a-apply 4-4a
+put design-reviewer/4b-zero 4-4b
+put design-reviewer/4c-matches 4-4c
+run feat "$sf" "${CALL[@]}" 'agent=planner:p1'
+check agent-ids-batch 0
+printf '%s\n' "$out" | grep -qxF '  continue: p1' || fail "the amend does not continue p1"
+grep -qxF -- '- Agents: planner p1 (for SendMessage)' "$sf" || fail "Agents does not hold planner p1"
+
+new_case "continue by role: a reformat spawn names the role, not the id" feat
+S set Agents 'specifier s0 (for SendMessage)'
+put specifier/today-layout 2-specify
+run feat "$sf" 2 "$R"
+check agent-ids-reformat 0
+[ "${out%%$'\n'*}" = reformat ] || fail "not a reformat"
+printf '%s\n' "$out" | grep -qxF '  continue: specifier' || fail "the reformat spawn does not read continue: specifier"
+printf '%s\n' "$out" | grep -qF 'continue: s0' && fail "the reformat spawn names the recorded id"
+
+new_case "agent= refused on an agent-run boundary" feat
+S set 'Current phase' '3 Plan'
+put planner/plain 3-plan
+run feat "$sf" 3 "$R" 'agent=planner:p1'
+usage_no_log "$AGENT_USAGE"
+run feat "$sf" 3 "$R" 'agent=p1'
+usage_no_log "$AGENT_USAGE"
+
+new_case "agent= refused: malformed on an answer call" feat
+S set Size large
+S set 'Current phase' '3 Plan'
+S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none'
+put planner/assume 3-plan
+run feat "$sf" 3 "$R"
+call_line 'answer call'
+for bad in 'agent=p1' 'agent=shipper:p1' 'agent=planner:' 'agent=planner:a.b'; do
+  run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")' "$bad"
+  usage_no_log "$AGENT_USAGE"
+done
+
+new_case "agent= refused in /fix" fix
+put bug-assessor/assess-soft 1-assess
+run fix "$sf" 1 "$R" 'agent=planner:p1'
+usage_no_log "$AGENT_USAGE"
+
+# --- chores ride on the coordinator's next own call (contracts/prompts.md, Chores) --------
+
+# a pending Log line chained before the answer call (`S log … && T …`),
+# with an agent= word on the same call: both land, the line first
+gate3_hard "chores: a pending log line rides on the answer call"
+S log '- [!] brief left in place: /x/b.md'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")' 'agent=planner:p1'
+check chores-log-answer 0
+[ "${out%%$'\n'*}" = answered ] || fail "the answer was not taken"
+grep -qxF -- '- Agents: planner p1 (for SendMessage)' "$sf" || fail "Agents does not hold planner p1"
+pend="$(grep -nxF -- '- [!] brief left in place: /x/b.md' "$sf" | cut -d: -f1)"
+ans="$(grep -nF -- '    - answer: approved (user: "ok")' "$sf" | cut -d: -f1)"
+[ -n "$pend" ] && [ -n "$ans" ] && [ "$pend" -lt "$ans" ] || fail "the pending line is not in the Log before the answer's lines"
 
 if [ "$update" = 1 ] && [ "$updated" = 1 ]; then
   echo "step: expected/ rewritten; review it with git diff tests/step/expected"
