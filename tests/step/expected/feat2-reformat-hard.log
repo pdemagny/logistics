@@ -3,4 +3,4 @@
 - Current phase: 2 Specify
 # /feat state: Test feature
 --
-- [x] 2 Specify [hard] — unparsable: 2-specify-2.md: line 11 (Wrote)
+- [x] 2 Specify [hard] — unparsable: 2-specify-2.md: line 11 (Wrote) — not a "- " item at column 0

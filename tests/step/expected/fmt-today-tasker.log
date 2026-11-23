@@ -3,4 +3,4 @@
 - Current phase: 5 Tasks
 # /feat state: Test feature
 --
-- [!] 5 Tasks — unparsable: 5-tasks.md: line 15 (Wrote); reformat 1 of 1
+- [!] 5 Tasks — unparsable: 5-tasks.md: line 15 (Wrote) — not a "- " item at column 0; reformat 1 of 1

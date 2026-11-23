@@ -1,0 +1,12 @@
+reformat
+unparsable line: 3-plan.md: Size trigger: none — no service, no new permission
+spawn: feat-planner
+  row: 3
+  mode: reformat
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/3-plan-2.md
+  continue: fresh
+  from: @TOP@/specs/x/reports/3-plan.md
+  unparsable: 3-plan.md: line 9 (Size trigger) — a value outside its format
+boundary:	3	@TOP@/specs/x/reports/3-plan-2.md

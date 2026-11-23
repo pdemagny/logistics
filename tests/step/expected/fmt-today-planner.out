@@ -8,5 +8,5 @@ spawn: feat-planner
   report: @TOP@/specs/x/reports/3-plan-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/3-plan.md
-  unparsable: 3-plan.md: line 12 (Wrote)
+  unparsable: 3-plan.md: line 12 (Wrote) — not a "- " item at column 0
 boundary:	3	@TOP@/specs/x/reports/3-plan-2.md

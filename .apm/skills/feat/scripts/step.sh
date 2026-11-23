@@ -791,16 +791,18 @@ schema() {
 # --- reports: the parser ------------------------------------------------------------
 # parse <path> <agent> <mode>: fails closed. PK/PV/PN = each field's key,
 # header value and line; PI0/PIN = its items' range in PI. P_BAD = 1 when
-# unparsable, with P_LINE (0: missing), P_KEY, P_TEXT; P_WNOTE = 1 for
+# unparsable, with P_LINE (0: missing), P_KEY, P_TEXT and P_WHY (what is
+# wrong, fixed words that never quote the line); P_WNOTE = 1 for
 # `Wrote: none <note>`.
 
 PK=() PV=() PN=() PI0=() PIN=() PI=() PT=()
 CUR=-1 KI=-1 V='' VL=0 VF=-1 IT=()
-P_BAD=0 P_LINE=0 P_KEY='' P_TEXT='' P_WNOTE=0 P_FILE=''
+P_BAD=0 P_LINE=0 P_KEY='' P_TEXT='' P_WHY='' P_WNOTE=0 P_FILE=''
 
+# pbad <line> <key> [<text> [<why>]]
 pbad() {
   if (( P_BAD )); then return 0; fi
-  P_BAD=1 P_LINE=$1 P_KEY=$2 P_TEXT=${3-}
+  P_BAD=1 P_LINE=$1 P_KEY=$2 P_TEXT=${3-} P_WHY=${4-}
 }
 
 # pkey <line>: KI = the schema index of the field the line starts, or -1
@@ -828,32 +830,33 @@ pclose() {
         PI=("${PI[@]:0:${#PI[@]}-1}") ;;
     esac
   fi
+  local h="${PK[f]}: ${PV[f]}"
   case $t in
     N)
       if [[ $v == none ]]; then
-        (( n == 0 )) || pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}"
+        (( n == 0 )) || pbad "${PN[f]}" "${PK[f]}" "$h" 'items under none'
       elif [[ $v =~ ^[0-9]+$ ]]; then
-        (( n == v )) || pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}"
+        (( n == v )) || pbad "${PN[f]}" "${PK[f]}" "$h" 'the count differs from its items'
       else
-        pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}"
+        pbad "${PN[f]}" "${PK[f]}" "$h" 'not a bare count or none'
       fi ;;
     C)
-      [[ $v =~ ^[0-9]+$ || $v == none ]] || pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}" ;;
+      [[ $v =~ ^[0-9]+$ || $v == none ]] || pbad "${PN[f]}" "${PK[f]}" "$h" 'not a bare count or none' ;;
     K)
       case $v in
-        pass) (( n == 0 )) || pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}" ;;
-        violations) (( n > 0 )) || pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}" ;;
-        *) pbad "${PN[f]}" "${PK[f]}" "${PK[f]}: ${PV[f]}" ;;
+        pass) (( n == 0 )) || pbad "${PN[f]}" "${PK[f]}" "$h" 'items under pass' ;;
+        violations) (( n > 0 )) || pbad "${PN[f]}" "${PK[f]}" "$h" 'violations with no item' ;;
+        *) pbad "${PN[f]}" "${PK[f]}" "$h" 'a value outside its set' ;;
       esac ;;
     *)
-      if [[ -z $v ]] && (( n == 0 )); then pbad "${PN[f]}" "${PK[f]}" "${PK[f]}:"; fi ;;
+      if [[ -z $v ]] && (( n == 0 )); then pbad "${PN[f]}" "${PK[f]}" "${PK[f]}:" 'an empty field (write none)'; fi ;;
   esac
 }
 
 parse() {
   local path=$1 line n=0 i f t
   PK=() PV=() PN=() PI0=() PIN=() PI=() PT=()
-  P_BAD=0 P_LINE=0 P_KEY='' P_TEXT='' P_WNOTE=0 P_FILE=${path##*/}
+  P_BAD=0 P_LINE=0 P_KEY='' P_TEXT='' P_WHY='' P_WNOTE=0 P_FILE=${path##*/}
   schema "$2" "${3-}"
   CUR=-1
   while IFS= read -r line || [[ -n $line ]]; do
@@ -863,7 +866,7 @@ parse() {
     if (( KI >= 0 )); then
       pclose
       for (( i = 0; i < ${#PK[@]}; i++ )); do
-        if [[ ${PK[i]} == "${SCH_K[KI]}" ]]; then pbad "$n" "${SCH_K[KI]}" "$line"; fi
+        if [[ ${PK[i]} == "${SCH_K[KI]}" ]]; then pbad "$n" "${SCH_K[KI]}" "$line" 'the field written twice'; fi
       done
       t=${SCH_T[KI]}
       f=${#PK[@]}
@@ -877,10 +880,10 @@ parse() {
           case $line in
             '' | none) CUR=$f ;;
             'none '*) P_WNOTE=1; CUR=$f ;;
-            *) pbad "$n" Wrote "Wrote: $line" ;;
+            *) pbad "$n" Wrote "Wrote: $line" 'text after a list header' ;;
           esac ;;
-        L) case $line in '' | none) CUR=$f ;; *) pbad "$n" "${PK[f]}" "${PK[f]}: $line" ;; esac ;;
-        A) case $line in '' | none | n/a) CUR=$f ;; *) pbad "$n" "${PK[f]}" "${PK[f]}: $line" ;; esac ;;
+        L) case $line in '' | none) CUR=$f ;; *) pbad "$n" "${PK[f]}" "${PK[f]}: $line" 'text after a list header' ;; esac ;;
+        A) case $line in '' | none | n/a) CUR=$f ;; *) pbad "$n" "${PK[f]}" "${PK[f]}: $line" 'text after a list header' ;; esac ;;
         *) CUR=$f ;;
       esac
       (( ! P_BAD )) || break
@@ -890,13 +893,14 @@ parse() {
     [[ -n ${line//[[:space:]]/} ]] || continue
     if [[ $line == '- '?* && ${line:2:1} != ' ' ]]; then
       case ${PV[CUR]} in
-        none* | n/a | pass) pbad "$n" "${PK[CUR]}" "$line"; break ;;
+        none*) pbad "$n" "${PK[CUR]}" "$line" 'an item under none (write the header alone)'; break ;;
+        n/a | pass) pbad "$n" "${PK[CUR]}" "$line" "an item under ${PV[CUR]} (write the header alone)"; break ;;
       esac
       PI+=("${line#- }")
       PIN[CUR]=$(( PIN[CUR] + 1 ))
       continue
     fi
-    pbad "$n" "${PK[CUR]}" "$line"
+    pbad "$n" "${PK[CUR]}" "$line" 'not a "- " item at column 0'
     break
   done <"$path"
   if (( ! P_BAD )); then pclose; fi
@@ -928,7 +932,7 @@ pitems() {
 
 # pwant <key> <regex>: the field's value must match, else unparsable there
 pwant() {
-  if pget "$1" && ! [[ $V =~ $2 ]]; then pbad "$VL" "$1" "$1: $V"; fi
+  if pget "$1" && ! [[ $V =~ $2 ]]; then pbad "$VL" "$1" "$1: $V" 'a value outside its format'; fi
 }
 
 # pitem_want <key> <regex>: each item must match
@@ -936,7 +940,7 @@ pitem_want() {
   local it
   pitems "$1"
   for it in ${IT[@]+"${IT[@]}"}; do
-    if ! [[ $it =~ $2 ]]; then pbad "$VL" "$1" "- $it"; return 0; fi
+    if ! [[ $it =~ $2 ]]; then pbad "$VL" "$1" "- $it" 'an item outside its format'; return 0; fi
   done
 }
 
@@ -994,10 +998,12 @@ validate() {
   esac
 }
 
-# unparsable_reason: UR = the reason naming the file, line and key (never the text)
+# unparsable_reason: UR = the reason naming the file, line, key and what is
+# wrong (never the text)
 unparsable_reason() {
   if (( P_LINE )); then
     UR="$P_FILE: line $P_LINE ($P_KEY)"
+    if [[ -n $P_WHY ]]; then UR+=" — $P_WHY"; fi
   else
     UR="$P_FILE: no $P_KEY: line"
   fi

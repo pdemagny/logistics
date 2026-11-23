@@ -8,5 +8,5 @@ spawn: feat-bug-assessor
   report: @TOP@/specs/x/reports/1-assess-2.md
   continue: fresh
   from: @TOP@/specs/x/reports/1-assess.md
-  unparsable: 1-assess.md: line 23 (Performance bug)
+  unparsable: 1-assess.md: line 23 (Performance bug) — a value outside its format
 boundary:	1	@TOP@/specs/x/reports/1-assess-2.md

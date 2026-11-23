@@ -1,5 +1,5 @@
 hard:
-- unparsable: 4-4a+4b+4c-2.md: line 5 (Findings)
+- unparsable: 4-4a+4b+4c-2.md: line 5 (Findings) — an item outside its format
 unparsable line: 4-4a+4b+4c-2.md: - the page size is fetched per item — at: plan.md: Approach — fix: fetch it 
 counts: 0 findings, 0 applied, 0 skipped
 answer call:	4	@TOP@/specs/x/reports/4-4a+4b+4c-2.md	sum=4-4a+4b+4c-2.md:@SUM@

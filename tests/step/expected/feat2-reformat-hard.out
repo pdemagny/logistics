@@ -1,4 +1,4 @@
 hard:
-- unparsable: 2-specify-2.md: line 11 (Wrote)
+- unparsable: 2-specify-2.md: line 11 (Wrote) — not a "- " item at column 0
 unparsable line: 2-specify-2.md: @TOP@/specs/x/spec.md
 answer call:	2	@TOP@/specs/x/reports/2-specify-2.md	sum=2-specify-2.md:@SUM@

@@ -1047,8 +1047,8 @@ check resume-feat3-amend 0
 reformat_on() {
   local t
   [ "$(printf '%s\n' "$out" | head -n 1)" = reformat ] || fail "not a reformat turn"
-  printf '%s\n' "$out" | grep -qE "^  unparsable: [^ ]+: (line [0-9]+ \($1\)|no $1: line)\$" || fail "no unparsable: line for $1"
-  tail -n 1 "$sf" | grep -qE "^- \[!\] .* — unparsable: [^ ]+: (line [0-9]+ \($1\)|no $1: line); reformat 1 of 1\$" || fail "reformat line not logged"
+  printf '%s\n' "$out" | grep -qE "^  unparsable: [^ ]+: (line [0-9]+ \($1\)( — [^;]+)?|no $1: line)\$" || fail "no unparsable: line for $1"
+  tail -n 1 "$sf" | grep -qE "^- \[!\] .* — unparsable: [^ ]+: (line [0-9]+ \($1\)( — [^;]+)?|no $1: line); reformat 1 of 1\$" || fail "reformat line not logged"
   t="$(printf '%s\n' "$raw" | sed -n 's/^unparsable line: [^:]*: //p')"
   if [ -n "$t" ] && grep -qF -- "$t" <(sed -n '/^## Log/,$p' "$sf"); then fail "the line's text reached the Log"; fi
 }
@@ -1095,6 +1095,34 @@ for v in bad-indented:Checks bad-star:Checks bad-wrapped:'Not verified'; do
   reformat_on "${v#*:}"
 done
 
+# reformat_why <words>: the reformat reason, on stdout and in the Log, says
+# what is wrong with the line
+reformat_why() {
+  printf '%s\n' "$out" | grep -qF -- ") — $1" || fail "no reason \"$1\" on stdout"
+  tail -n 1 "$sf" | grep -qF -- ") — $1; reformat 1 of 1" || fail "no reason \"$1\" in the Log"
+}
+
+# the slips of #74: an item under `Checks: none`, a count with a note, and a
+# note after `Size trigger: none`
+for v in bad-checks-none:Checks:'an item under none (write the header alone)' \
+  bad-files-plus:'Files changed':'not a bare count or none'; do
+  b=${v%%:*} k=${v#*:}
+  feat6 "format: implementer $b" small
+  put "implementer/$b" 6-US1
+  run feat "$sf" 6 "$R"
+  check "fmt-impl-$b" 0
+  reformat_on "${k%%:*}"
+  reformat_why "${k#*:}"
+done
+
+new_case "format: planner Size trigger none with a note" feat
+S set 'Current phase' '3 Plan'
+put planner/bad-trigger-note 3-plan
+run feat "$sf" 3 "$R"
+check fmt-plan-trigger-note 0
+reformat_on 'Size trigger'
+reformat_why 'a value outside its format'
+
 # today's layout (bare paths under Wrote:) is unparsable at its first bare path
 new_case "format: planner in today's layout" feat
 S set 'Current phase' '3 Plan'
@@ -1138,7 +1166,7 @@ msg="$(
     if ((P_BAD)); then unparsable_reason; printf '%s\n' "$UR"; else printf '%s: parses\n' "${f##*/}"; fi
   done
 )" || fail "parser exited: $msg"
-[ "$msg" = 'bad-move.md: line 7 (Move (rebase mode))
+[ "$msg" = 'bad-move.md: line 7 (Move (rebase mode)) — a value outside its format
 rebase-no-nv.md: no Not verified: line
 rebase-moved.md: parses' ] || fail "$msg"
 

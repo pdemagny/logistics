@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 3 Plan
+# /feat state: Test feature
+--
+- [!] 3 Plan — unparsable: 3-plan.md: line 9 (Size trigger) — a value outside its format; reformat 1 of 1

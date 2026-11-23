@@ -154,7 +154,7 @@ report alone, once every command has returned. `step.sh` checks every
 written.
 
 **Reformat mode** (every mode): when the prompt says `Mode: reformat`,
-with `From: <report>` and `Unparsable: <file>: line <n> (<Key>)` (or
+with `From: <report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or
 `<file>: no <Key>: line`): read that report, write it again in the format
 below to your new report path, fixing the named line and any other line
 that breaks the format, and change nothing else: no other file, no new
@@ -176,7 +176,9 @@ earlier path again. With no report path, hand back the full report.
 
 Report, and nothing else. Each list item is one `- ` line at column 0,
 never wrapped; write `none` for an empty field or section. A list field
-reads `<Key>: none`, or `<Key>:` alone followed by its items. `Command for
+reads `<Key>: none`, or `<Key>:` alone followed by its items, never both:
+the block shows each list header alone above its item template, and
+`<Key>: none` is the whole field when there is no item. `Command for
 the user:` is `none` unless `PR: blocked`. `Wrote:` lists the absolute path
 of each file or dir you created, at its final path (the numbered spec dir,
 new docs, the report path when one was given), one `- ` item per line, or
@@ -185,14 +187,14 @@ new docs, the report path when one was given), one `- ` item per line, or
 ```
 PR: <url> | blocked | conflict
 Command for the user: none | <the ! line, if blocked>
-Conflicts: none
+Conflicts:
 - <path the rebase stopped on>
-Commits: none
+Commits:
 - <hash subject>
 Left uncommitted: <paths, or "none">
 Docs updated: <paths, or "none">
 Wrote:
 - <absolute path>
-Not verified: none
+Not verified:
 - n/a → <check> → <why>
 ```

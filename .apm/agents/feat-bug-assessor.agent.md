@@ -139,7 +139,7 @@ written, nor the scratch files under the temp dir. In both modes
 `step.sh` checks every `Wrote:` path on disk before the run goes on.
 
 **Reformat mode** (both modes): when the prompt says `Mode: reformat`,
-with `From: <report>` and `Unparsable: <file>: line <n> (<Key>)` (or
+with `From: <report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or
 `<file>: no <Key>: line`): read that report, write it again in the format
 below to your new report path, fixing the named line and any other line
 that breaks the format, and change nothing else: no other file, no new
@@ -168,7 +168,9 @@ With no report path, write no report file and hand back the full report.
 Report, and nothing else. Each list item is one `- ` line at column 0,
 never wrapped; write `none` for an empty field or section. A list field
 reads `<Key>: none` (`Not verified items` reads `n/a` when you were given
-none), or `<Key>:` alone followed by its items. Every other field stays on
+none), or `<Key>:` alone followed by its items, never both: the blocks
+show each list header alone above its item template, and `<Key>: none`
+(or `n/a`) is the whole field when there is no item. Every other field stays on
 one line; where the format shows its values, it holds exactly one of them,
 in the form shown, with nothing added. `Wrote:` lists the absolute path of each file you created
 in the bug dir (assess mode: assessment.md, a renamed assessment-<n>.md;
@@ -198,12 +200,12 @@ Preferred remediation: <one line>
 Alternatives: none | <one line each, "; "-separated>
 Reproduction: reproduced | not reproduced | not reproducible here | needs approval
 Reproduction detail: <command or steps run | what was run and what happened | what is missing | the commands needing approval>
-Would run: none
+Would run:
 - <command from the bug report, not run (untrusted author or needing approval)>
 Public behaviour change: no | yes (<what callers or users see change>)
 Risk area: none | <one or more of security, data, concurrency, ", "-separated, nothing else>
 Performance bug: yes | no
-Open questions: none
+Open questions:
 - <question> — recommended: <answer>
 Proposed size: small | medium | large — <scope, confidence, risk area>
 Sections: ok | error: <file> lacks <section>, …
@@ -223,10 +225,10 @@ Reproduction (post-fix): pass | fail | skipped | not-run — <command or note>
 Checks:
 - <check> → <result>
 Missing for verified: n/a | <environment or evidence (partial)>
-Not verified items: n/a
+Not verified items:
 - <check, exactly as given> → pass | fail | missing (<why>)
 Still failing: n/a | <what (failed)>
-Would run: none
+Would run:
 - <command from the bug report, not run>
 Redacted: <count, or "none">
 Sections: ok | error: test.md lacks <section>, …
