@@ -1,0 +1,13 @@
+reformat
+diff: git diff @SHA@
+spawn: feat-code-reviewer
+  row: 4a+4b
+  mode: review
+  lenses: 7a+7b
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/4-7a+7b.md
+  continue: fresh
+  diff: git diff @SHA@
+  diff file: @TOP@/specs/x/reports/review.diff
+boundary:	4	@TOP@/specs/x/reports/4-7a+7b.md	snapshot=@SNAP@

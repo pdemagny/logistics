@@ -570,6 +570,7 @@ open_gate() {
       case ${LG[j]} in
         '- [!] step: '*) ;;
         '- [!] '*' — unparsable: '*) ;;
+        '- [!] '*'; fresh spawn 1 of 1') ;;
         '- [!] move — git fetch failed'*) ;;
         '- [!] '[0-9]* | '- [!] move — '*) OG_RC=1 ;;
         '- [!] '*) ;;
@@ -579,6 +580,7 @@ open_gate() {
     for (( j = i + 1; j < ${#LG[@]}; j++ )); do
       case ${LG[j]} in
         '- [!] '*' — unparsable: '*) ;;
+        '- [!] '*'; fresh spawn 1 of 1') ;;
         '- [!] move — git fetch failed'*) ;;
         '- [!] '[0-9]* | '- [!] move — '*) OG_RC=1 ;;
       esac
@@ -1064,8 +1066,14 @@ renumbered() {
 }
 
 # Per report of the call: RP_PATH, RP_NEW (1 new, 0 passed again), RP_HASH,
-# RP_BAD, RP_UR (the unparsable reason), RP_TEXT (the line, stdout only)
-RP_PATH=() RP_NEW=() RP_HASH=() RP_BAD=() RP_UR=() RP_TEXT=() WROTE=()
+# RP_BAD, RP_UR (the unparsable reason), RP_TEXT (the line, stdout only),
+# RP_MISS (1: a new report missing, its check left to review_boundary)
+RP_PATH=() RP_NEW=() RP_HASH=() RP_BAD=() RP_UR=() RP_TEXT=() RP_MISS=() WROTE=()
+
+# DEFER_MISS=1 (a reviewer batch): a new report that is missing is a reason
+# and RP_MISS, not yet a failed check; review_boundary decides whether its
+# group is spawned again or the check fails
+DEFER_MISS=0
 
 # check_report <path> <agent> <mode> <new>: gates.md, every boundary, step 3;
 # then the parse (step 5)
@@ -1075,8 +1083,13 @@ check_report() {
   if [[ $is_new == 1 && ! -e $path && -n $RENUM && ${RENUM##*/} == "$f" ]]; then path=$RENUM; fi
   RP_PATH+=("$path") RP_NEW+=("$is_new")
   k=$(( ${#RP_PATH[@]} - 1 ))
-  RP_HASH+=('') RP_BAD+=(0) RP_UR+=('') RP_TEXT+=('')
+  RP_HASH+=('') RP_BAD+=(0) RP_UR+=('') RP_TEXT+=('') RP_MISS+=(0)
   if [[ ! -s $path ]]; then
+    if (( DEFER_MISS )) && [[ $is_new == 1 ]]; then
+      RP_MISS[k]=1
+      reason "report missing: $f"
+      return 0
+    fi
     fail_check "report missing: $f"
     return 0
   fi
@@ -1187,10 +1200,11 @@ turn_used() {
 }
 
 # reformat_keys: RFK = ' <key> … ', the keys of the reformat lines among the
-# Log's trailing entries
+# Log's trailing entries; FSK the same for a reviewer batch's fresh spawn
+# lines (a group whose report was missing, spawned again)
 reformat_keys() {
   local i l f
-  RFK=' '
+  RFK=' ' FSK=' '
   for (( i = ${#LG[@]} - 1; i >= 0; i-- )); do
     l=${LG[i]}
     case $l in
@@ -1200,6 +1214,12 @@ reformat_keys() {
         f=${f%%': '*}
         report_key "$f"
         RFK+="$RK "
+        continue ;;
+      '- [!] '*' — report missing: '*'; fresh spawn 1 of 1')
+        f=${l#*' — report missing: '}
+        f=${f%%'; '*}
+        report_key "$f"
+        FSK+="$RK "
         continue ;;
     esac
     return 0
@@ -1298,14 +1318,20 @@ role_of() {
   esac
 }
 
-# reformat <token>: the reformat turn for every unparsable report of the call
+# reformat <token>: the reformat turn for every unparsable report of the call,
+# and in a reviewer batch a fresh spawn of each group whose report is missing
 reformat() {
   local i words=() f rows
   VERDICT=reformat
   role_of "$1"
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
     f=${RP_PATH[i]##*/}
-    if (( RP_BAD[i] )); then
+    if (( ${RP_MISS[i]:-0} )); then
+      qlog "- [!] $PH — report missing: $f; fresh spawn 1 of 1"
+      report_key "$f"
+      review_respawn "$1" "$RK"
+      words+=("$RPATH")
+    elif (( RP_BAD[i] )); then
       qlog "- [!] $PH — unparsable: ${RP_UR[i]}; reformat 1 of 1"
       if [[ -n ${RP_TEXT[i]} ]]; then out 6 "unparsable line: ${RP_TEXT[i]}"; fi
       report_key "$f"
@@ -1328,7 +1354,7 @@ reformat() {
     fi
   done
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
-    if (( ! RP_BAD[i] )); then words+=("sum=${RP_PATH[i]##*/}:${RP_HASH[i]}"); fi
+    if (( ! RP_BAD[i] && ! ${RP_MISS[i]:-0} )); then words+=("sum=${RP_PATH[i]##*/}:${RP_HASH[i]}"); fi
   done
   if [[ $AGENT == *reviewer ]]; then words+=('snapshot=@SNAP@'); NEED_SNAP=1; fi
   out_call 22 'boundary:' "$1" "${words[@]}"
@@ -1506,8 +1532,16 @@ resume_next() {
   next_step
 }
 
-# diff_prep: the code review diff; DIFF_BASE = its base; 1 when it is empty
+# diff_base: DIFF_BASE = the merge base with origin's default branch, unless
+# already set
 DIFF_BASE=
+diff_base() {
+  [[ -z $DIFF_BASE ]] || return 0
+  default_branch
+  DIFF_BASE=$(git -C "$TOP" merge-base "refs/remotes/origin/$DEF" HEAD 2>/dev/null) || die "no merge base with origin/$DEF"
+}
+
+# diff_prep: the code review diff; DIFF_BASE = its base; 1 when it is empty
 diff_prep() {
   local i p f n=0 rc=0 paths=() added=()
   default_branch
@@ -1535,7 +1569,7 @@ diff_prep() {
     if (( n <= 20 )); then out 11 "untracked, not in the diff: $f"; fi
   done < <(git -C "$TOP" ls-files -z --others --exclude-standard 2>/dev/null)
   if (( n > 20 )); then out 11 "untracked, not in the diff: … $((n - 20)) more"; fi
-  DIFF_BASE=$(git -C "$TOP" merge-base "refs/remotes/origin/$DEF" HEAD 2>/dev/null) || die "no merge base with origin/$DEF"
+  diff_base
   git -C "$TOP" diff --quiet "$DIFF_BASE" -- >/dev/null 2>&1 || rc=$?
   case $rc in
     0) return 1 ;;
@@ -1785,8 +1819,7 @@ batch_covered() {
 
 # review_batch: the reviewer spawns of Current phase (/feat 4, 7; /fix 4)
 review_batch() {
-  local p=${F_PHASE%% *} i words=() agent=feat-code-reviewer last
-  if [[ $SKILL == feat && $p == 4 ]]; then agent=feat-design-reviewer; fi
+  local p=${F_PHASE%% *} i words=() last
   batch_groups "$p"
   last=$GLAST
   if (( p == 7 || SKILL_FIX4 )); then
@@ -1795,21 +1828,46 @@ review_batch() {
   rejected_lines
   accepted_sec
   for (( i = 0; i <= last; i++ )); do
-    spawn_group "${GR_ROWS[i]}" review "$p-${GR_LENSES[i]}"
-    if [[ -n $DIFF_BASE ]]; then
-      diff_write
-      skey diff "git diff $DIFF_BASE"
-      skey 'diff file' "$DIFF_FILE"
-    fi
-    slist rejected ${RJ[@]+"${RJ[@]}"}
-    if [[ $agent == feat-code-reviewer && +${GR_LENSES[i]}+ == *+7b+* ]]; then slist 'accepted sec' ${AS[@]+"${AS[@]}"}; fi
-    sinputs
+    review_spawn "$p" "$i"
     words+=("$RPATH")
   done
   NEED_SNAP=1
   out_call 22 'boundary:' "$p" "${words[@]}" 'snapshot=@SNAP@'
 }
 SKILL_FIX4=0
+
+# review_spawn <phase> <index>: the spawn of the batch's group GR_*[index],
+# in review mode (RJ, AS and DIFF_BASE as the batch set them)
+review_spawn() {
+  local p=$1 i=$2
+  spawn_group "${GR_ROWS[i]}" review "$p-${GR_LENSES[i]}"
+  if [[ -n $DIFF_BASE ]]; then
+    diff_write
+    skey diff "git diff $DIFF_BASE"
+    skey 'diff file' "$DIFF_FILE"
+  fi
+  slist rejected ${RJ[@]+"${RJ[@]}"}
+  if [[ $SKILL:$p != feat:4 && +${GR_LENSES[i]}+ == *+7b+* ]]; then slist 'accepted sec' ${AS[@]+"${AS[@]}"}; fi
+  sinputs
+}
+
+# review_respawn <token> <key>: a fresh spawn of the group whose report is
+# missing (reformat), as the batch spawned it; RPATH = its report path
+review_respawn() {
+  local p=${1%e} l=${2#*-} i
+  if [[ $SKILL:$l == feat:7e ]]; then spawn_7e_block; return 0; fi
+  batch_groups "$p"
+  if [[ $SKILL:$p == feat:7 || $SKILL:$p == fix:4 ]] && [[ -z $DIFF_BASE ]]; then
+    diff_base
+    out 12 "diff: git diff $DIFF_BASE"
+  fi
+  rejected_lines
+  accepted_sec
+  for (( i = 0; i <= GLAST; i++ )); do
+    if [[ ${GR_LENSES[i]} == "$l" ]]; then review_spawn "$p" "$i"; return 0; fi
+  done
+  die "no reviewer group $2"
+}
 
 # owed_4: 0 when gate 4 passed with findings to apply (AP) or answered
 # changed, and no planner amend follows it
@@ -2585,12 +2643,20 @@ merged_apply() {
 
 # spawn_7e: /feat 7's second batch (medium, large), after 7a-7d's call
 spawn_7e() {
-  local k cuts=none words=()
+  local k words=()
+  spawn_7e_block
+  words=("$RPATH" "${RP_PATH[@]}")
+  for (( k = 0; k < ${#RP_PATH[@]}; k++ )); do words+=("sum=${RP_PATH[k]##*/}:${RP_HASH[k]}"); done
+  NEED_SNAP=1
+  out_call 22 'boundary:' 7e "${words[@]}" 'snapshot=@SNAP@'
+}
+
+# spawn_7e_block: lens 7e's spawn block (its cuts: 7d's report among the
+# call's reports); RPATH = its report path
+spawn_7e_block() {
+  local k cuts=none
   groups_get 7 default
-  if [[ -z $DIFF_BASE ]]; then
-    default_branch
-    DIFF_BASE=$(git -C "$TOP" merge-base "refs/remotes/origin/$DEF" HEAD 2>/dev/null) || die "no merge base with origin/$DEF"
-  fi
+  diff_base
   out 12 "diff: git diff $DIFF_BASE"
   spawn_group "${GR_ROWS[${#GR_ROWS[@]} - 1]}" review 7-7e
   diff_write
@@ -2604,10 +2670,6 @@ spawn_7e() {
   rejected_lines
   slist rejected ${RJ[@]+"${RJ[@]}"}
   sinputs
-  words=("$RPATH" "${RP_PATH[@]}")
-  for (( k = 0; k < ${#RP_PATH[@]}; k++ )); do words+=("sum=${RP_PATH[k]##*/}:${RP_HASH[k]}"); done
-  NEED_SNAP=1
-  out_call 22 'boundary:' 7e "${words[@]}" 'snapshot=@SNAP@'
 }
 
 # security_bug: 0 when the 1 Assess facts name security or lack risk area
@@ -2709,7 +2771,7 @@ review_gate() {
 
 # review_boundary <token>: a reviewer batch's call (/feat 4, 7, 7e; /fix 4)
 review_boundary() {
-  local tok=$1 f i turn=1 new rf=0
+  local tok=$1 f i turn=1 new rf=0 again=1 slip=0
   [[ -n $A_SNAP ]] || usage "snapshot= missing on a reviewer batch call: $SYN"
   (( ${#A_REPORTS[@]} )) || usage "boundary $tok takes the batch's reports: $SYN"
   [[ -z $A_AGENT ]] || usage "agent= only after a specifier, planner or tasker spawn: $SYN"
@@ -2717,9 +2779,10 @@ review_boundary() {
   phase_head "$tok"
   role_of "$tok"
   # a report passed again carries its sum=: 7a-7d's at 7e, after a reformat
-  # line of this batch all but the reformatted ones
+  # or fresh spawn line of this batch all but the reformatted or respawned ones
   reformat_keys
-  case $RFK in *" ${tok%e}-"*) rf=1 ;; esac
+  case "$RFK$FSK" in *" ${tok%e}-"*) rf=1 ;; esac
+  DEFER_MISS=1
   for f in "${A_REPORTS[@]}"; do
     sum_of "${f##*/}"
     new=1
@@ -2727,23 +2790,34 @@ review_boundary() {
       new=0
     else
       report_key "${f##*/}"
-      if [[ $tok == 7e && $RK != 7-7e ]] || { [[ $tok != 7e ]] && (( rf )) && [[ $RFK != *" $RK "* ]]; }; then
+      if [[ $tok == 7e && $RK != 7-7e ]] || { [[ $tok != 7e ]] && (( rf )) && [[ "$RFK$FSK" != *" $RK "* ]]; }; then
         usage "sum= missing for ${f##*/}: $SYN"
       fi
     fi
     rmode "$f"
     check_report "$f" "$AGENT" "$RM" "$new"
   done
+  DEFER_MISS=0
   snap_check
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
+    report_key "${RP_PATH[i]##*/}"
     if (( RP_BAD[i] )); then
-      report_key "${RP_PATH[i]##*/}"
+      slip=1
       if turn_used "$RK"; then turn=0; fi
     fi
+    if (( RP_MISS[i] )); then
+      slip=1
+      if [[ $FSK == *" $RK "* ]]; then again=0; fi
+    fi
+  done
+  # a group's missing report gets one fresh spawn, with the others' reformat
+  # turns, when nothing else failed; otherwise each is a failed check
+  if (( ! CHK_FAIL && ! SNAPF && turn && again && slip )); then reformat "$tok"; return 0; fi
+  for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
+    if (( RP_MISS[i] )); then fail_check "report missing: ${RP_PATH[i]##*/}"; fi
   done
   for (( i = 0; i < ${#RP_PATH[@]}; i++ )); do
     (( RP_BAD[i] )) || continue
-    if (( ! CHK_FAIL && ! SNAPF && turn )); then reformat "$tok"; return 0; fi
     reason "unparsable: ${RP_UR[i]}"
     if [[ -n ${RP_TEXT[i]} ]]; then out 6 "unparsable line: ${RP_TEXT[i]}"; fi
   done

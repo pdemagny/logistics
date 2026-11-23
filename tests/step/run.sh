@@ -1508,6 +1508,66 @@ without sum=7-7a.md
 run feat "$sf" "${LESS[@]}"
 usage_no_log 'sum= missing for 7-7a.md'
 
+# a group's missing report: one fresh spawn of that group, logged, with the
+# other reports' reformat turns; a second miss of the group is hard; any
+# other failed check in the call stays hard at once
+
+review_case "batch: 7d's report missing and 7c's slip: 7d again, 7c reformatted" feat medium '7 Code review'
+put code-reviewer/7a-plain 7-7a
+put code-reviewer/7b-sec 7-7b
+put code-reviewer/bad-7c-slip 7-7c
+run feat "$sf" "${CALL[@]}"
+check batch-missing-slip 0
+call_line boundary
+put code-reviewer/7c-zero 7-7c-2
+put code-reviewer/7d-zero 7-7d
+without sum=7-7a.md
+run feat "$sf" "${LESS[@]}"
+usage_no_log 'sum= missing for 7-7a.md'
+run feat "$sf" "${CALL[@]}"
+check batch-missing-slip-7e 0
+
+review_case "batch: 7d's report missing twice: hard" feat medium '7 Code review'
+put code-reviewer/7a-plain 7-7a
+put code-reviewer/7b-sec 7-7b
+put code-reviewer/7c-zero 7-7c
+run feat "$sf" "${CALL[@]}"
+check batch-missing 0
+call_line boundary
+run feat "$sf" "${CALL[@]}"
+check batch-missing-twice 0
+
+review_case "batch: 7d's report missing and a failed check: hard at once" feat medium '7 Code review'
+put code-reviewer/7a-plain 7-7a
+printf -- '- relative.md\n' >>"$R"
+put code-reviewer/7b-sec 7-7b
+put code-reviewer/7c-zero 7-7c
+run feat "$sf" "${CALL[@]}"
+check batch-missing-check 0
+
+review_case "batch: 7d's report missing and a file changed outside the reports: hard at once" feat medium '7 Code review'
+put code-reviewer/7a-plain 7-7a
+put code-reviewer/7b-sec 7-7b
+put code-reviewer/7c-zero 7-7c
+printf 'more\n' >>"$top/README.md"
+run feat "$sf" "${CALL[@]}"
+check batch-missing-snapshot 0
+
+medium7 "batch: 7e's report missing and a 7a-7d report edited: hard at once" medium
+printf 'edited\n' >>"$rd/7-7a.md"
+command rm -f "$rd/7-7e.md"
+run feat "$sf" "${CALL[@]}"
+check batch-missing-changed 0
+
+medium7 "batch: 7e's report missing: 7e again, its cuts kept" medium
+command rm -f "$rd/7-7e.md"
+run feat "$sf" "${CALL[@]}"
+check feat7e-missing 0
+call_line boundary
+put code-reviewer/7e-zero 7-7e
+run feat "$sf" "${CALL[@]}"
+check feat7-medium-gate 0
+
 # the answer call's reports give back the list the gate logged
 medium7 "answers: a call whose reports lose a logged finding is usage" medium
 run feat "$sf" "${CALL[@]}"
@@ -1554,6 +1614,14 @@ check fix4-perf-batch 0
 review_case "fix 4 medium: performance bug missing reads as yes" fix medium '4 Code review' \
   '- [x] 1 Assess [soft] — gate: valid, high confidence, reproduced, 1 remediation(s); size small; risk area none'
 check fix4-perf-missing-batch 0
+
+review_case "fix 4 medium: a group's report missing: that group again" fix medium '4 Code review' "$A1_PASS"
+run fix "$sf" "${CALL[@]}"
+check fix4-missing 0
+call_line boundary
+put code-reviewer/7a+7b-zero 4-7a+7b
+run fix "$sf" "${CALL[@]}"
+[ "$rc" = 0 ] && [ "$(printf '%s\n' "$out" | head -n 1)" != reformat ] || fail "the respawned group's report: exit $rc or reformat again"
 
 review_case "fix 4 small: nothing found, phase 5" fix small '4 Code review' "$A1_PASS"
 put code-reviewer/7a+7b+7d-zero 4-7a+7b+7d

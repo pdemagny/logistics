@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 4 Code review
+# /fix state: a reported bug
+--
+- [!] 4 Code review — report missing: 4-7a+7b.md; fresh spawn 1 of 1

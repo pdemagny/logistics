@@ -1,0 +1,8 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 7 Code review
+# /feat state: Test feature
+--
+- [!] 7 Code review — 7-7a.md: Wrote item 2 is not absolute
+- [!] 7 Code review — report missing: 7-7d.md
+- [x] 7 Code review [hard] — 7-7a.md: Wrote item 2 is not absolute; report missing: 7-7d.md

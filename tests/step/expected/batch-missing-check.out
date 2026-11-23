@@ -1,0 +1,4 @@
+hard:
+- 7-7a.md: Wrote item 2 is not absolute
+- report missing: 7-7d.md
+answer call:	7e	@TOP@/specs/x/reports/7-7a.md	@TOP@/specs/x/reports/7-7b.md	@TOP@/specs/x/reports/7-7c.md	@TOP@/specs/x/reports/7-7d.md	sum=7-7a.md:@SUM@	sum=7-7b.md:@SUM@	sum=7-7c.md:@SUM@
