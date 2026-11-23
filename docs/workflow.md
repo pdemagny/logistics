@@ -684,9 +684,10 @@ reviewer groups are `sizes.json`'s `fix` part.
   checks. Never merges. Before
   committing it runs `.apm/skills/feat/scripts/secret-scan.sh` on the
   staged diff (as `/feat`'s ship now does too): only added lines count, and a match (a vendor token prefix,
-  or a key named password, token, secret or api key holding a literal
-  value) stops the ship with `<file>:<line>` and the rule, never the
-  value. The tracker refuses an issue body by the same rules.
+  a key named password, token, secret or api key holding a literal
+  value, an `Authorization` `Bearer` token, a bare JWT, or a URL with a
+  password in its authority) stops the ship with `<file>:<line>` and the
+  rule, never the value. The tracker refuses an issue body by the same rules.
 
 No agent is continued: every spawn is fresh.
 

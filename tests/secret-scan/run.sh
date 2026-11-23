@@ -30,6 +30,9 @@ pw="pass""word" pwd="pass""wd" tok="tok""en" sec="sec""ret" api="api""_key"
 gh="gh""p_" pat="github""_pat_" aws="AK""IA" slack="xo""xb-" oai="s""k-"
 pem="-----BEG""IN RSA PRIVATE KEY-----"
 long="Zq81mXv0Lw3NcR7tYp2Ue5Ha"
+# A Bearer word (two cases), JWT parts and a URL prefix with its `//` split off.
+bw="Bear""er" bl="bear""er" jh="ey""JhbGciOiJIUzI1NiJ9" jp="ey""JzdWIiOiIxMjM0In0"
+u="https:/""/" btok="Ab12Cd34Ef56Gh78Ij90"
 
 # new_case <name>: a fresh repo ($repo) with one commit.
 new_case() {
@@ -172,11 +175,14 @@ current="sourced"
 secret_rule "one"$'\n'"$tok: \"abcd1234efgh\"" || fail "secret_rule missed a quoted literal"
 [ "$SECRET_RULE" = key-literal ] || fail "rule: $SECRET_RULE"
 ! secret_rule "one"$'\n'"$tok: \${{ secrets.X }}" || fail "secret_rule matched an env-var reference"
+secret_rule "one"$'\n'"remote: ${u}deploy:s3cretpw@host" || fail "secret_rule missed URL credentials"
+[ "$SECRET_RULE" = url-credentials ] || fail "rule: $SECRET_RULE"
 ok
 
 # 7. More literals: a `=>` separator (PHP, Ruby), unquoted values holding
 # `.` (a JWT) or `@`, and a path with a space, which git ends with a tab in
-# the `+++` header: the reported name has no tab.
+# the `+++` header: the reported name has no tab. A key whose value is a JWT
+# reports jwt: the vendor rules run before key-literal.
 new_case "separators and paths"
 jwt="eyJhbGciOiJIUzI1NiJ9"".eyJzdWIiOiIxMjM0In0"".c2lnbmF0dXJlMQ"
 put conf.php "\$c = ['$pw' => 'hunter2024x'];" "\$d = ['$tok' => \$x];"
@@ -185,7 +191,7 @@ git -C "$repo" add -A
 scan staged
 expect_rc 1
 expect_out "conf.php:1: key-literal
-my conf.env:1: key-literal
+my conf.env:1: jwt
 my conf.env:2: key-literal"
 expect_hidden hunter2024x "$jwt" adm1n
 ok
@@ -227,4 +233,42 @@ command cp -f -- "$here/run.sh" "$repo/run.sh"
 scan worktree secret-scan.sh run.sh
 expect_rc 0
 expect_out ""
+ok
+
+# 10. Bearer headers, JWTs and URL credentials: lines 1-7 are positives, the
+# rest near misses (placeholders, short or incomplete shapes, prose, ssh).
+new_case "bearer, jwt and URL credentials"
+put creds.txt \
+  "Authorization: $bw $btok" \
+  "authorization: $bl $btok" \
+  "see $jh.$jp.c2lnbmF0dXJlMQ ok" \
+  "x $jh.$jp." \
+  "remote: ${u}deploy:s3cretpw@host/o/r.git" \
+  "${u}deploy:abc123@host" \
+  "x $bw ${gh}abcdefghijklmnop" \
+  "my-pkg-$bl $long$long" \
+  "$bw <token>" \
+  "$bw <redacted>" \
+  "$bw \$TOKEN" \
+  "a $bw token" \
+  "ey""J.." \
+  "ey""Jabc.defghijklmnop." \
+  "$jh.short." \
+  "${u}user@host" \
+  "${u}user:abcde@host" \
+  "${u}user:<password>@host" \
+  "${u}user:\${PASS}@host" \
+  "${u}user:{abcdefg}@host" \
+  "git@host:owner/repo"
+git -C "$repo" add -A
+scan staged
+expect_rc 1
+expect_out "creds.txt:1: bearer-token
+creds.txt:2: bearer-token
+creds.txt:3: jwt
+creds.txt:4: jwt
+creds.txt:5: url-credentials
+creds.txt:6: url-credentials
+creds.txt:7: github-token"
+expect_hidden "$btok" "$jh" "$jp" c2lnbmF0dXJlMQ s3cretpw abc123
 ok
