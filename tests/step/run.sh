@@ -566,6 +566,26 @@ call_line 'answer call'
 run feat "$sf" "${CALL[@]}" 'answer: changed (user: "fix the groups")'
 check feat5-changed 0
 
+# #97: "Analyze: ran" is proven only by analyze's metrics; without them, or
+# with "none", the gate is hard as if analyze had not run
+new_case "feat 5 hard: analyze ran without its metrics" feat
+S set Size small
+S set 'Current phase' '5 Tasks'
+S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+put tasker/ran-no-metrics 5-tasks
+run feat "$sf" 5 "$R"
+check feat5-no-metrics 0
+
+new_case "feat 5 hard: analyze ran with metrics none" feat
+S set Size small
+S set 'Current phase' '5 Tasks'
+S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+put tasker/match 5-tasks
+sed -i 's/^Analyze metrics: .*$/Analyze metrics: none/' "$R"
+run feat "$sf" 5 "$R"
+check feat5-metrics-none 0
+[ "$out" = "$(cat "$ex/feat5-no-metrics.out")" ] || fail "metrics none differs from metrics missing"
+
 # --- /feat 6 -------------------------------------------------------------------------------
 
 feat6() {
@@ -1157,6 +1177,15 @@ put planner/bad-trigger-note 3-plan
 run feat "$sf" 3 "$R"
 check fmt-plan-trigger-note 0
 reformat_on 'Size trigger'
+reformat_why 'a value outside its format'
+
+new_case "format: Analyze metrics outside its format" feat
+S set 'Current phase' '5 Tasks'
+put tasker/match 5-tasks
+sed -i 's/^Analyze metrics: .*$/Analyze metrics: looked fine/' "$R"
+run feat "$sf" 5 "$R"
+check fmt-tasker-metrics 0
+reformat_on 'Analyze metrics'
 reformat_why 'a value outside its format'
 
 # today's layout (bare paths under Wrote:) is unparsable at its first bare path
@@ -2658,7 +2687,8 @@ many_tasks() {
   t=$(printf 'T%03d' "$1")
   R="$rd/5-tasks.md"
   printf '%s\n' "Tasks: $top/specs/x/tasks.md" "Total tasks: $1" 'Per story:' '- setup/foundational: T001' "- US1: T002–$t" \
-    'MVP slice: T001–T002' 'Analyze: ran' 'Fixed: none' >"$R"
+    'MVP slice: T001–T002' 'Analyze: ran' \
+    "Analyze metrics: 8 requirements, $1 tasks, 100% coverage, 0 ambiguities, 0 duplications, 0 critical" 'Fixed: none' >"$R"
   if [ "${2-}" = HIGH ]; then
     printf '%s\n' 'Open findings:' '- HIGH — US1 has no test → add one (tasks.md)' >>"$R"
   else

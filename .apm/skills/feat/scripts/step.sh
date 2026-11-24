@@ -1039,7 +1039,7 @@ schema() {
       sk 1 1 'Size trigger'; sk 1 0 'Skipped hooks'; sk W 1 Wrote ;;
     tasker)
       sk 1 1 Tasks; sk 1 1 'Total tasks'; sk L 1 'Per story'; sk 1 0 'MVP slice'
-      sk 1 0 Analyze; sk 1 0 Fixed; sk L 1 'Open findings'
+      sk 1 0 Analyze; sk 1 0 'Analyze metrics'; sk 1 0 Fixed; sk L 1 'Open findings'
       sk 1 1 'Unchecked checklist items'; sk 1 0 'Skipped hooks'; sk W 1 Wrote ;;
     implementer)
       sk 1 0 'Tasks done'; sk A 0 'Tasks not done'; sk L 1 Checks
@@ -1287,6 +1287,7 @@ validate() {
       pwant Tasks '^/.+\.md$'
       pwant 'Total tasks' '^[0-9]+$'
       pwant Analyze '^(ran|not run \(.*\))$'
+      pwant 'Analyze metrics' '^(none|[0-9]+ requirements, [0-9]+ tasks, [0-9]+(\.[0-9]+)?% coverage, [0-9]+ ambiguities, [0-9]+ duplications, [0-9]+ critical)$'
       pitem_want 'Per story' '^(setup/foundational|US[0-9]+|polish): .+$'
       pitem_want 'Open findings' '^(CRITICAL|HIGH|MEDIUM|LOW) — .+$'
       pwant 'Unchecked checklist items' '^(none|open: .+)$' ;;
@@ -3616,7 +3617,12 @@ dec_feat_5() {
     done
     if (( n )); then reason "$n CRITICAL/HIGH findings"; fi
     if pget Analyze; then
-      if [[ $V != ran ]]; then reason 'analyze not run'; fi
+      if [[ $V != ran ]]; then
+        reason 'analyze not run'
+      # ran is proven only by analyze's own metrics (#97)
+      elif ! pget 'Analyze metrics' || [[ $V == none ]]; then
+        reason 'analyze not run (ran without its metrics)'
+      fi
     else
       reason 'analyze: not said'
     fi

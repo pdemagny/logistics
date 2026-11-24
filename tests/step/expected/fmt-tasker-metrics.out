@@ -1,0 +1,14 @@
+reformat
+unparsable line: 5-tasks.md: Analyze metrics: looked fine
+spawn: feat-tasker
+  row: 5
+  mode: reformat
+  model: sonnet
+  effort: medium
+  report: @TOP@/specs/x/reports/5-tasks-2.md
+  continue: tasker
+  from: @TOP@/specs/x/reports/5-tasks.md
+  unparsable: 5-tasks.md: line 10 (Analyze metrics) — a value outside its format
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	5	@TOP@/specs/x/reports/5-tasks-2.md
+boundary:	5	@TOP@/specs/x/reports/5-tasks-2.md
