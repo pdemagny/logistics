@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 7 Code review
+# /feat state: Test feature
+--
+- [x] 7 Code review [hard] — gates: hard

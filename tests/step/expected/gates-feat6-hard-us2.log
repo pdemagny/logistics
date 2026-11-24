@@ -1,0 +1,7 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 6 Implement
+# /feat state: Test feature
+--
+- [x] 6 US2 — not verified: none
+- [x] 6 Implement [hard] — US2: gates: hard

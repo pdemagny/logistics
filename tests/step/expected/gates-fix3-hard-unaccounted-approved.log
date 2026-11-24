@@ -1,0 +1,8 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 4 Code review
+# /fix state: a reported bug
+--
+    - answer: approved (user: "checked it by hand")
+- [x] 3 Test — unaccounted: live run (user: "checked it by hand")
+- [x] 3 Test [soft] — verified

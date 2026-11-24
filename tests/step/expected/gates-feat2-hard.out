@@ -1,0 +1,3 @@
+hard:
+- gates: hard
+answer call:	2	@TOP@/specs/x/reports/2-specify.md	sum=2-specify.md:@SUM@

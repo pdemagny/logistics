@@ -72,7 +72,8 @@ missing, stop: "/fix needs logistics' `feat` skill
   are refused).
 - *Tracker script*: `<this skill's base dir>/../feat/scripts/tracker.sh`.
 - *Board-check step*: Setup step 5 (on resume, run `check` yourself: exit
-  ≠ 0 → stop and show its line).
+  ≠ 0 → stop and show its line; a line starting `tracker: off` → no board
+  moves this run).
 - *Building move*:
   - when: after the assess gate passes (right away for an existing issue,
     after creation for a new one);
@@ -167,7 +168,8 @@ Code plugin.
      `pointer:` lines (with the plugin form) and stop.
    - `kind: empty`: show the `usage:` line and stop.
    - `kind: issue` or `symptom`: keep `title:`, `issue:`, `author:`,
-     `bug extension:`, `hooks allowed:`, `slug:` and `board:`.
+     `bug extension:`, `hooks allowed:`, `slug:`, `board:`, `gates:` and
+     `default:` (harness, Gates in force).
    - `kind: resume`: run steps 3 and 4, then follow Resume (below)
      instead of steps 5 and 6.
    - `kind: rebase`: run steps 3 and 4 (no board check: `rebase` makes no
@@ -184,7 +186,8 @@ Code plugin.
    `Allowed Spec Kit hooks` is `hooks allowed:` plus any the user allowed.
 5. **Board check** (see Board moves): step 2 ran `check` (a failure
    stopped there). A `board:` line other than `off`: show it and say this
-   run's board moves go to that board. Setup makes no move and creates no
+   run's board moves go to that board. A `gates:` line other than `none`:
+   show it (harness, Gates in force). Setup makes no move and creates no
    issue: the building move (and any issue creation) waits for the assess
    gate.
 6. EnterWorktree (step 2 fetched the base), before spawning anything.
@@ -194,7 +197,8 @@ Code plugin.
    '<title>' '<the argument, its lines joined with spaces>'
    'Branch=fix-<slug>' 'Worktree=<path>' 'Size=not set' 'Agents=none
    (every spawn is fresh)' 'Current phase=1 Assess' 'Conventions=<…>'
-   'Allowed Spec Kit hooks=<…>' 'Map=none' 'Issue=<issue:, or none>' &&
+   'Allowed Spec Kit hooks=<…>' 'Map=none' 'Issue=<issue:, or none>'
+   'Gates=<gates:>' &&
    S log '<state file>' '- [x] 0 Setup — <board line>; slug <slug>; bug
    extension <version>; report author <association>'`, plus any `[!]`
    lines kept so far as more `log` arguments, then `&& T fix '<state
@@ -214,8 +218,9 @@ Code plugin.
   before committing has `5 Ship` back in the local copy, and one waiting
   on the user's `!` command (`done (shipping)`, no upstream) resumes at
   phase 5.
-- **Board**: run `check` after `T resume`; exit ≠ 0 → stop. The building
-  move only once it printed `assess gate: passed`.
+- **Board**: run `check` after `T resume`; exit ≠ 0 → stop; a line
+  starting `tracker: off` → no board moves. The building move only once it
+  printed `assess gate: passed`.
 - **Continue** with what `T resume` printed: finished phases are not
   redone, and the current one restarts with a fresh spawn, as every spawn
   is; its gate then follows from the new report. If the assess gate passed
@@ -383,7 +388,7 @@ assessment's remediation alternatives not chosen.
   restate what becomes public once pushed (the visibility stated at the
   assess gate: PR, body, committed trail) and ask for the go-ahead to ship
   (`approved` logs it).
-- `large`, `<ids> need you`, `S<n> security`: list every finding with its
+- `large`, `gates: hard`, `<ids> need you`, `S<n> security`: list every finding with its
   `rec`, `user` first.
 - **Soft**: one line, `Phase 4 Code review — soft: <step.sh's counts:>;
   none needs your call. Next: <review fixes, then phase 3 again | phase 5

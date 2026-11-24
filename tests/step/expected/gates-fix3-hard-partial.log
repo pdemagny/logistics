@@ -1,0 +1,6 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 3 Test
+# /fix state: a reported bug
+--
+- [x] 3 Test [hard] — partial: a run on the device; gates: hard

@@ -1,0 +1,6 @@
+- Size: large
+- Agents: none (every spawn is fresh)
+- Current phase: 4 Design review
+# /feat state: Test feature
+--
+- [x] 3 Plan — merged with 4; assumptions needing you: 2, 4; constitution: V. Standard library only; blockers: none; size trigger: service; gates: soft

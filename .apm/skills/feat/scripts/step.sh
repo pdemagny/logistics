@@ -165,6 +165,9 @@ story() {
 # --- the state file ---------------------------------------------------------------
 
 F_TITLE='' F_BRANCH='' F_WT='' F_SIZE='' F_AGENTS='' F_PHASE='' F_ISSUE=''
+# the Gates: field (none when missing: a run started before it; data-model.md
+# of specs/configurable-gates, Gates field)
+F_GATES=none
 # the fields as read, which a commit that fails part way puts back (undo_sets)
 O_TITLE='' O_SIZE='' O_AGENTS='' O_PHASE=''
 LG=()   # the Log's lines, gate lines without their tag
@@ -190,6 +193,7 @@ read_state() {
   local line in_log=0 in_head=1 v
   [[ -f $SF && -r $SF ]] || die "$SF is not a state file"
   F_TITLE='' F_BRANCH='' F_WT='' F_SIZE='' F_AGENTS='' F_PHASE='' F_ISSUE=''
+  F_GATES=none
   LG=() LT=() LOG0=()
   {
     IFS= read -r line || true
@@ -217,6 +221,7 @@ read_state() {
         '- Agents: '*) F_AGENTS=${line#'- Agents: '} ;;
         '- Current phase: '*) F_PHASE=${line#'- Current phase: '} ;;
         '- Issue: '*) F_ISSUE=${line#'- Issue: '} ;;
+        '- Gates:'*) F_GATES=${line#'- Gates:'}; F_GATES=${F_GATES# } ;;
       esac
     done
   } <"$SF"
@@ -261,6 +266,129 @@ load_state() {
   if [[ -f $SF && -r $SF ]]; then sf_hash; SF_H0=$SFH; fi
   read_state
   STATE_READ=1
+}
+
+# --- the gates ----------------------------------------------------------------------
+# The Gates: field (specs/configurable-gates/contracts/gates.md): the value of
+# gate <n> is its cell for the size that applies; auto is 013's tables.
+
+# canon_gates <skill> <value>: the value is none or the skill's canonical
+# tokens (a copy of state.sh's check: scripts can't source each other)
+canon_gates() {
+  local s=$1 v=$2 t n z rank prev=-1 pplain=0 pn=0
+  [[ $v == none ]] && return 0
+  [[ -n $v && $v != ' '* && $v != *' ' && $v != *'  '* ]] || return 1
+  for t in $v; do
+    [[ $t =~ ^([a-z]+)\.([0-9])(\.(small|medium|large))?=(soft|hard)$ ]] || return 1
+    [[ ${BASH_REMATCH[1]} == "$s" ]] || return 1
+    n=${BASH_REMATCH[2]} z=${BASH_REMATCH[4]}
+    case $s:$n in feat:[2-7] | fix:[1-4]) ;; *) return 1 ;; esac
+    case $z in '') rank=0 ;; small) rank=1 ;; medium) rank=2 ;; large) rank=3 ;; esac
+    rank=$((n * 4 + rank))
+    (( rank > prev )) || return 1
+    if (( n == pn )) && { (( pplain )) || [[ -z $z ]]; }; then return 1; fi
+    pn=$n prev=$rank pplain=0
+    [[ -n $z ]] || pplain=1
+  done
+}
+
+# gates_check: a Gates: value that is not canonical is an error
+gates_check() {
+  canon_gates "$SKILL" "$F_GATES" || die "Gates: $F_GATES is not a canonical $SKILL gates value"
+}
+
+# gate_cfg <n> <size>: GC = the cell of gate n for that size (the size token,
+# else the plain one, else auto)
+gate_cfg() {
+  local g=" $F_GATES " t=$SKILL.$1
+  GC=auto
+  if [[ $g == *" $t.$2="* ]]; then
+    GC=${g#*" $t.$2="}
+  elif [[ $g == *" $t="* ]]; then
+    GC=${g#*" $t="}
+  else
+    return 0
+  fi
+  GC=${GC%% *}
+}
+
+# in_force <n> <holds> [<size>]: 0 when the size reason holds (1) and gate n's
+# cell for the size (default: Size's column) is not soft
+in_force() {
+  local z=${3-}
+  if [[ -z $z ]]; then size_col; z=$SC; fi
+  gate_cfg "$1" "$z"
+  (( $2 )) && [[ $GC != soft ]]
+}
+
+# 1 when a soft cell removed a size reason (size_gate sets it, soft_mark reads it)
+SOFTENED=0
+
+# size_gate <n> <holds> <reason|-> [<size> [<hard reason|->]]
+# The size reason when it holds (1) and gate n's cell is not soft (soft:
+# SOFTENED=1 instead), then the hard reason when the cell is hard. <size>
+# empty or left out: Size's column. <hard reason> left out: gates: hard;
+# - silences it. A size reason of - goes with a holds of 0 (never added).
+size_gate() {
+  local z=${4-} hr=${5-gates: hard}
+  if [[ -z $z ]]; then size_col; z=$SC; fi
+  gate_cfg "$1" "$z"
+  if (( $2 )); then
+    if [[ $GC == soft ]]; then SOFTENED=1; else reason "$3"; fi
+  fi
+  if [[ $GC == hard && $hr != - ]]; then reason "$hr"; fi
+}
+
+# soft_mark: SM = "; gates: soft" when a soft cell removed the size reason
+soft_mark() { SM=; if (( SOFTENED )); then SM='; gates: soft'; fi; }
+
+# gate3_stops: 0 when /feat 3 stops (the size reason in force on large, or
+# the cell hard); G3 = the gate carrying a soft phase 2's summary (3 or 4)
+gate3_stops() {
+  local h=0
+  size_col
+  if [[ $SC == large ]]; then h=1; fi
+  G3=4
+  if in_force 3 "$h" || [[ $GC == hard ]]; then G3=3; return 0; fi
+  return 1
+}
+
+# g3_stop: 0 when gate 3 stopped (G3STOP): the latest 3 Plan record is a
+# tagged line holding the reason large or gates: hard (amended lines and
+# report-check gates in between skipped); G3I = its index. 1 when it is the
+# merged record. With neither (a Log written before tagged gates or a 3 Plan
+# record): Size large reads as stopped, as before gates were configurable,
+# G3I the latest tagged 3 Plan line (-1). G3REC = 1 when a record decided
+g3_stop() {
+  local i rest
+  G3I=-1 G3REC=1
+  for (( i = ${#LG[@]} - 1; i >= 0; i-- )); do
+    case ${LG[i]} in
+      '- [x] 3 Plan — merged with 4'*) return 1 ;;
+      '- [x] 3 Plan — '*)
+        [[ -n ${LT[i]} ]] || continue
+        rest=${LG[i]#'- [x] 3 Plan — '}
+        case "; $rest; " in
+          *'; large; '* | *'; gates: hard; '*) G3I=$i; return 0 ;;
+        esac ;;
+    esac
+  done
+  G3REC=0
+  size_col
+  [[ $SC == large ]] || return 1
+  latest_gate '3 Plan'
+  G3I=$LGI
+}
+
+# phase2_mode: ST = state.sh phase2-mode with G3, the gate carrying a soft
+# phase 2's summary: once a 3 Plan record exists, from it (stopped: 3,
+# merged: 4), so a later size change does not move it; before, from Size
+# and the cell (gate3_stops)
+phase2_mode() {
+  G3=4
+  if g3_stop; then G3=3; fi
+  if (( ! G3REC )); then gate3_stops || true; fi
+  st phase2-mode "$SF" "$G3"
 }
 
 # --- pending writes ---------------------------------------------------------------
@@ -2888,26 +3016,37 @@ security_bug() {
   (( ! AF_HAS_RISK )) || [[ ,${AF_RISK// /}, == *,security,* ]]
 }
 
-# plan_rows: gate 4's 3 Plan, paraphrase and checklist rows (small, medium)
+# plan_rows <all|no3|only3>: gate 4's 3 Plan, paraphrase and checklist rows
+# (small, medium), in their order: all of them, all but plan3_rows (gate 3
+# stopped and evaluated them), or plan3_rows alone (a gate 3 softened on
+# large: they are checked here). plan3_rows: assumption <k> needs you,
+# constitution, blocker, checklist item, fact missing: unchecked checklist
+# items
 plan_rows() {
-  local k rest
+  local k rest p3=1 other=1
+  case $1 in no3) p3=0 ;; only3) other=0 ;; esac
   plan_facts
-  if [[ -n $PF_ASSUME && $PF_ASSUME != none ]]; then
-    for k in ${PF_ASSUME//,/ }; do reason "assumption $k needs you"; done
+  if (( p3 )); then
+    if [[ -n $PF_ASSUME && $PF_ASSUME != none ]]; then
+      for k in ${PF_ASSUME//,/ }; do reason "assumption $k needs you"; done
+    fi
+    if [[ -n $PF_CONST && $PF_CONST != pass ]]; then
+      rest=$PF_CONST
+      while [[ -n $rest ]]; do
+        reason "constitution: ${rest%%', '*}"
+        if [[ $rest == *', '* ]]; then rest=${rest#*', '}; else rest=; fi
+      done
+    fi
+    if [[ $PF_BLOCK == yes ]]; then reason blocker; fi
   fi
-  if [[ -n $PF_CONST && $PF_CONST != pass ]]; then
-    rest=$PF_CONST
-    while [[ -n $rest ]]; do
-      reason "constitution: ${rest%%', '*}"
-      if [[ $rest == *', '* ]]; then rest=${rest#*', '}; else rest=; fi
-    done
+  if (( other )); then
+    if [[ -n $PF_TRIGGER && $PF_TRIGGER != none && $SC == small ]]; then
+      reason "size increase: small → medium ($PF_TRIGGER)"
+    fi
+    for k in ${PF_MISSING[@]+"${PF_MISSING[@]}"}; do reason "fact missing: $k"; done
+    if [[ $PARA == contradicts* ]]; then reason 'paraphrase contradicts the brief'; fi
   fi
-  if [[ $PF_BLOCK == yes ]]; then reason blocker; fi
-  if [[ -n $PF_TRIGGER && $PF_TRIGGER != none && $SC == small ]]; then
-    reason "size increase: small → medium ($PF_TRIGGER)"
-  fi
-  for k in ${PF_MISSING[@]+"${PF_MISSING[@]}"}; do reason "fact missing: $k"; done
-  if [[ $PARA == contradicts* ]]; then reason 'paraphrase contradicts the brief'; fi
+  (( p3 )) || return 0
   p2_facts
   if (( ! P2_HAS )); then
     reason 'fact missing: unchecked checklist items'
@@ -2918,7 +3057,7 @@ plan_rows() {
 
 # review_gate <token>: the merged list, its rows, the gate line and next
 review_gate() {
-  local design=0 head i tk
+  local design=0 head i tk h g3
   case $SKILL:$1 in
     feat:4) design=1 head='4 Design review' ;;
     feat:*) head='7 Code review' ;;
@@ -2927,29 +3066,35 @@ review_gate() {
   if (( design )); then merge_design; else merge_code; fi
   mcount
   size_col
+  h=0
+  if [[ $SC == large ]]; then h=1; fi
   if [[ $SKILL == fix ]]; then
     assess_facts
     if (( ! AF_HAS_RISK )); then reason 'fact missing: risk area'; fi
     if security_bug; then reason 'security risk area'; fi
-    if [[ $SC == large ]]; then reason large; fi
-  elif [[ $SC == large ]]; then
-    reason large
   fi
-  if [[ $SKILL == fix || $SC != large ]]; then
+  # the size reason, then gates: hard (contracts/gates.md of configurable-gates)
+  size_gate "${1%e}" "$h" large
+  g3=1
+  if (( design )) && ! g3_stop; then g3=0; fi
+  if [[ $SKILL == fix ]] || ! in_force "${1%e}" "$h"; then
     if (( ${#MC_USER[@]} )); then comma "${MC_USER[@]}"; reason "$J need you"; fi
     if (( design )); then
-      plan_rows
+      # gate 3 stopped: it evaluated plan3_rows
+      if (( g3 )); then plan_rows no3; else plan_rows all; fi
     else
       for i in ${MC_SEC[@]+"${MC_SEC[@]}"}; do reason "$i security"; done
       if [[ $SKILL == feat ]]; then
         for i in ${NOTMET[@]+"${NOTMET[@]}"}; do reason "criterion not met: $i"; done
       fi
     fi
+  elif (( design && ! g3 )); then
+    # large in force after a gate 3 softened on large: its reasons here
+    plan_rows only3
   fi
   review_print "$design"
-  if (( design )) && [[ $SC == large ]]; then
-    latest_gate '3 Plan'
-    for (( i = LGI + 1; LGI >= 0 && i < ${#LG[@]}; i++ )); do
+  if (( design && g3 && G3I >= 0 )); then
+    for (( i = G3I + 1; i < ${#LG[@]}; i++ )); do
       if [[ ${LG[i]} == '- [x] 3 Plan — amended'* ]]; then out 14 'note: plan amended after gate 3'; break; fi
     done
   fi
@@ -2963,11 +3108,12 @@ review_gate() {
   fi
   VERDICT=soft
   soft_text
-  qlog "- [x] $head [soft] — $ST_TEXT"
+  soft_mark
+  qlog "- [x] $head [soft] — $ST_TEXT$SM"
   review_subs
   merged_apply ${MC_APPLY[@]+"${MC_APPLY[@]}"}
   if (( design )); then
-    st phase2-mode "$SF"
+    phase2_mode
     if [[ $ST == 'soft 4 open' ]]; then qlog '    - spec assumptions: kept as recommended'; fi
     if (( ${#MA[@]} )); then agent_id planner; amend_spawn "$AID" "${MA[@]}"; else enter 5; fi
   elif (( ${#MA[@]} )); then
@@ -3274,6 +3420,8 @@ dec_feat_2() {
     pget Assumptions; subs+=("    - Spec assumptions: $V")
     pget 'Unchecked checklist items'; subs+=("    - Unchecked checklist items: $V")
   fi
+  # no size reason here: hard adds gates: hard after the table's reasons
+  size_gate 2 0 -
   if (( ${#REASONS[@]} )); then
     hard_gate '2 Specify'
   else
@@ -3329,7 +3477,7 @@ design_ids() {
 }
 
 dec_feat_3() {
-  local ok=0 r
+  local ok=0 r h
   FACTS=
   if reparse 0 planner; then ok=1; plan_report_facts; fi
   if [[ $F_PHASE == '4 '* ]]; then
@@ -3348,8 +3496,11 @@ dec_feat_3() {
     return 0
   fi
   size_col
-  if [[ $SC == large ]]; then
-    reason large
+  h=0
+  if [[ $SC == large ]]; then h=1; fi
+  # large when in force, then gates: hard (contracts/gates.md, 3 Plan)
+  size_gate 3 "$h" large
+  if gate3_stops; then
     if (( ok )); then
       for r in ${PR_REASONS[@]+"${PR_REASONS[@]}"}; do reason "$r"; done
       p2_facts
@@ -3365,7 +3516,8 @@ dec_feat_3() {
   fi
   if (( ${#REASONS[@]} )); then hard_gate '3 Plan' "$FACTS"; answer_call 3; return 0; fi
   VERDICT=soft
-  qlog "- [x] 3 Plan — merged with 4; $FACTS"
+  soft_mark
+  qlog "- [x] 3 Plan — merged with 4; $FACTS$SM"
   enter 4
 }
 
@@ -3455,7 +3607,7 @@ size_from_tasks() {
 }
 
 dec_feat_5() {
-  local ok=0 n=0 it total tasks
+  local ok=0 n=0 it total tasks h
   if reparse 0 tasker; then
     ok=1
     pitems 'Open findings'
@@ -3485,12 +3637,15 @@ dec_feat_5() {
     (( P2_HAS )) || reason 'fact missing: unchecked checklist items'
   fi
   size_col
-  if [[ $SC == large ]]; then reason large; fi
+  h=0
+  if [[ $SC == large ]]; then h=1; fi
+  size_gate 5 "$h" large
   if (( ${#REASONS[@]} )); then
     hard_gate '5 Tasks'
   else
     VERDICT=soft
-    qlog "- [x] 5 Tasks [soft] — $total tasks; story.sh: match; analyze ran"
+    soft_mark
+    qlog "- [x] 5 Tasks [soft] — $total tasks; story.sh: match; analyze ran$SM"
     enter 6
   fi
   answer_call 5
@@ -3514,7 +3669,7 @@ story_retry_used() {
 }
 
 dec_feat_6() {
-  local f u nv=0 k=0 n=0 nxt=last x done_all=1 checks=pass
+  local f u nv=0 k=0 n=0 nxt=last x done_all=1 checks=pass h
   f=${RP_PATH[0]##*/}
   report_key "$f"
   u=${RK#6-}
@@ -3543,7 +3698,9 @@ dec_feat_6() {
       pget 'Design problems'
       if [[ $V != none ]]; then reason "$u: design problem"; fi
       size_col
-      if [[ $SC == large ]]; then reason "$u: large"; fi
+      h=0
+      if [[ $SC == large ]]; then h=1; fi
+      size_gate 6 "$h" "$u: large" '' "$u: gates: hard"
     fi
   fi
   if stories; then
@@ -3566,7 +3723,8 @@ dec_feat_6() {
   VERDICT=soft
   if (( done_all )); then
     nv_story_count
-    qlog "- [x] 6 Implement [soft] — tasks done: ${ST_TOTAL:-$n} ($NVC not verified); checks pass"
+    soft_mark
+    qlog "- [x] 6 Implement [soft] — tasks done: ${ST_TOTAL:-$n} ($NVC not verified); checks pass$SM"
     enter 7
     answer_call 6
     return 0
@@ -3688,7 +3846,8 @@ dec_fix_1() {
   qset title "$v"
   assess_pass_text "$s"
   VERDICT=soft
-  qlog "- [x] 1 Assess [soft] — $PASS"
+  soft_mark
+  qlog "- [x] 1 Assess [soft] — $PASS$SM"
   fix_args_lines
   enter 2
   answer_call 1
@@ -3701,6 +3860,19 @@ fix_stop() {
   qlog "- [x] 1 Assess — stopped: $r"
   qset 'Current phase' "$1"
   out 24 "done: stopped ($r)"
+}
+
+# has_tracker_key <file>: the file has a top-level tracker: key (a line
+# `tracker:` then a space, a `#` or the end, CR stripped): board tracking on.
+# A copy of preflight.sh's has_tracker_key (it can't be sourced).
+has_tracker_key() {
+  local line re='^tracker:( |#|$)'
+  [[ -f $1 ]] || return 1
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    [[ $line =~ $re ]] && return 0
+  done <"$1"
+  return 1
 }
 
 assess_reasons() {
@@ -3716,11 +3888,17 @@ assess_reasons() {
   pget Reproduction; if [[ $V == 'needs approval' ]]; then reason 'needs approval'; fi
   pget 'Risk area'; v=$V
   if [[ ,${v// /}, == *,security,* ]]; then reason 'security risk area'; fi
-  if [[ -f $TOP/.logistics.yml && $F_ISSUE == none && ,${v// /}, != *,security,* ]]; then reason 'issue to create'; fi
+  if [[ $F_ISSUE == none && ,${v// /}, != *,security,* ]] && has_tracker_key "$TOP/.logistics.yml"; then reason 'issue to create'; fi
   pget Verdict; if [[ $V == 'likely valid, needs reproduction' ]]; then reason 'needs reproduction'; fi
   pitems 'Open questions'; if (( ${#IT[@]} )); then reason "open questions: ${#IT[@]}"; fi
   pget 'Several bugs'; if [[ $V != no ]]; then reason 'several bugs'; fi
-  pget 'Proposed size'; v=${V%%' — '*}; if [[ $v != small ]]; then reason "proposed size $v"; fi
+  # the cell for the proposed size (contracts/gates.md, /fix 1)
+  pget 'Proposed size'; v=${V%%' — '*}
+  case $v in
+    small) size_gate 1 0 - small ;;
+    medium | large) size_gate 1 1 "proposed size $v" "$v" ;;
+    *) reason "proposed size $v" ;;
+  esac
   pget Confidence; if [[ $V != high ]]; then reason "confidence $V"; fi
   pget Reproduction; if [[ $V != reproduced && $V != 'needs approval' ]]; then reason "$V"; fi
   pget Remediations; if [[ $V != 1 ]]; then reason "remediations: $V"; fi
@@ -3745,6 +3923,8 @@ dec_fix_2() {
     pget 'Status (bug mode)'; if [[ $V != applied ]]; then reason "status $V"; fi
     (( NV_SEEN )) || reason 'Not verified line missing'
   fi
+  # no size reason here: hard adds gates: hard after the table's reasons
+  size_gate 2 0 -
   if (( ${#REASONS[@]} )); then hard_gate '2 Fix'; answer_call 2; return 0; fi
   VERDICT=soft
   qlog "- [x] 2 Fix [soft] — ${pre}applied; no deviations; checks pass"
@@ -3752,30 +3932,51 @@ dec_fix_2() {
   answer_call 2
 }
 
-# test_rows <cycle> <retry-used>: the parsed test report's verdict rows
+# /fix 3's flag (research R10): dec_fix_3 sets it, an answer leaves it 0
+TR_GATES=0
+
+# tr_hard: the reason gates: hard on a hard 3 Test gate when TR_GATES is 1
+tr_hard() { if (( TR_GATES )); then reason 'gates: hard'; fi; }
+
+# test_rows <cycle> <retry-used>: the parsed test report's verdict rows; with
+# TR_GATES 1 (dec_fix_3, fix.3 hard: research R10 of configurable-gates) a
+# soft row is the hard gate `gates: hard; verdict: <v>`, a hard one ends
+# with gates: hard; an answer re-runs them with TR_GATES 0
 test_rows() {
   local v
   pget Verdict
   case $V in
     verified)
+      if (( TR_GATES )); then
+        reason 'gates: hard; verdict: verified'
+        hard_gate '3 Test'
+        return 0
+      fi
       VERDICT=soft
       qlog '- [x] 3 Test [soft] — verified'
       if [[ $1 == 'after review fixes' ]]; then enter 5; else enter 4; fi ;;
     partial)
       pget 'Missing for verified'
       reason "partial: $V"
+      tr_hard
       hard_gate '3 Test' ;;
     failed)
       pget 'Still failing'
       v=$V
       if [[ $1 == first && $2 == no ]]; then
-        VERDICT=soft
-        qlog "- [x] 3 Test [soft] — failed (retry 1 of 1): $v; retry fix"
-        pget 'Test report'
-        TEST_REPORT=$V
-        enter 2
+        if (( TR_GATES )); then
+          reason 'gates: hard; verdict: failed'
+          hard_gate '3 Test'
+        else
+          VERDICT=soft
+          qlog "- [x] 3 Test [soft] — failed (retry 1 of 1): $v; retry fix"
+          pget 'Test report'
+          TEST_REPORT=$V
+          enter 2
+        fi
       else
         reason "failed: $v"
+        tr_hard
         hard_gate '3 Test'
       fi ;;
   esac
@@ -3804,6 +4005,9 @@ dec_fix_3() {
   local cyc ru v i
   st cycle "$SF"; cyc=$ST
   st retry-used "$SF"; ru=$ST
+  size_col
+  gate_cfg 3 "$SC"
+  if [[ $GC == hard ]]; then TR_GATES=1; fi
   if reparse 0 test; then
     pget Sections; if [[ $V == error:* ]]; then reason "sections: ${V#error: }"; fi
     pget Slug; if [[ $V == mismatch* ]]; then v=${V#mismatch (}; reason "slug mismatch: ${v%)}"; fi
@@ -3827,6 +4031,7 @@ dec_fix_3() {
     fi
     if (( ! ${#REASONS[@]} )); then test_rows "$cyc" "$ru"; answer_call 3; return 0; fi
   fi
+  tr_hard
   hard_gate '3 Test'
   answer_call 3
 }
@@ -4020,7 +4225,7 @@ apply_answer() {
       fi ;;
     feat:3)
       if [[ $MAIN == changed ]]; then enter 3; return 0; fi
-      st phase2-mode "$SF"
+      phase2_mode
       if [[ $ST == 'soft 3 open' ]]; then qlog '    - spec assumptions: kept as recommended'; fi
       enter 4 ;;
     feat:4)
@@ -4028,7 +4233,7 @@ apply_answer() {
       if (( ${#MA[@]} )) || [[ $MAIN == changed ]]; then
         amend_spawn '' ${MA[@]+"${MA[@]}"}
       else
-        st phase2-mode "$SF"
+        phase2_mode
         if [[ $ST == 'soft 4 open' ]]; then qlog '    - spec assumptions: kept as recommended'; fi
         enter 5
       fi ;;
@@ -4327,7 +4532,7 @@ do_resume() {
   VERDICT=soft
   out 3 "resume: $F_PHASE"
   if [[ $SKILL == feat ]]; then
-    st phase2-mode "$SF"
+    phase2_mode
     out 4 "phase2-mode: $ST"
   elif assess_passed; then
     out 4 'assess gate: passed'
@@ -4380,6 +4585,7 @@ main() {
     CALL_KIND=resume
     load_state "$2"
     SKILL=$F_TITLE
+    gates_check
     top_level
     do_resume
   else
@@ -4398,6 +4604,7 @@ main() {
     fi
     load_state "$sf"
     [[ $F_TITLE == "$SKILL" ]] || die "$SF is a /$F_TITLE run"
+    gates_check
     top_level
     case $3 in
       setup) (( $# == 3 )) || usage; CALL_KIND=setup; do_setup ;;

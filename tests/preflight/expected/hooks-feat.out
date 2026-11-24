@@ -11,6 +11,7 @@ behaviour: 2 lines
 acceptance: 2 lines
 install: ok
 board: off
+gates: none
 default: main
 fetch: ok
 hook won't run: before_specify: git.speckit.git.feature → run it by hand: /speckit-git-feature

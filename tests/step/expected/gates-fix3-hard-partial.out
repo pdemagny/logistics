@@ -1,0 +1,4 @@
+hard:
+- partial: a run on the device
+- gates: hard
+answer call:	3	@TOP@/specs/x/reports/3-test.md	sum=3-test.md:@SUM@

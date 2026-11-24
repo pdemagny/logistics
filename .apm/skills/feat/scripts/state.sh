@@ -10,7 +10,9 @@
 #   state.sh cycle <state file>                     first | retry | after review fixes
 #   state.sh retry-used <state file>                yes | no
 #   state.sh shipped-verdict <state file>           <verdict>[ — <line>] | none
-#   state.sh phase2-mode <state file>               soft <G> open|closed | hard | none
+#   state.sh phase2-mode <state file> [<3|4>]       soft <G> open|closed | hard | none
+#                                                   (<3|4>: the gate carrying the summary;
+#                                                   without it, from Size)
 #   state.sh refused-base <state file>              <new> or nothing
 #   state.sh review-summary <state file> <phase>    the PR body's Code review part
 #   state.sh find feat|fix                          unfinished runs, one per line
@@ -91,6 +93,29 @@ is_field() {
 }
 
 valid_size() { case $1 in small | medium | large | 'not set') return 0 ;; esac; return 1; }
+
+# canon_gates <skill> <value>: the value is `none` or the skill's canonical
+# gate tokens: `<skill>.<n>=<v>` or `<skill>.<n>.<size>=<v>` (n settable,
+# v soft or hard), phases ascending, within a phase one plain token or size
+# tokens in small, medium, large order, each once, one space between.
+# (step.sh holds a copy of this check.)
+canon_gates() {
+  local s=$1 v=$2 t n z rank prev=-1 pplain=0 pn=0
+  [[ $v == none ]] && return 0
+  [[ -n $v && $v != ' '* && $v != *' ' && $v != *'  '* ]] || return 1
+  for t in $v; do
+    [[ $t =~ ^([a-z]+)\.([0-9])(\.(small|medium|large))?=(soft|hard)$ ]] || return 1
+    [[ ${BASH_REMATCH[1]} == "$s" ]] || return 1
+    n=${BASH_REMATCH[2]} z=${BASH_REMATCH[4]}
+    case $s:$n in feat:[2-7] | fix:[1-4]) ;; *) return 1 ;; esac
+    case $z in '') rank=0 ;; small) rank=1 ;; medium) rank=2 ;; large) rank=3 ;; esac
+    rank=$((n * 4 + rank))
+    (( rank > prev )) || return 1
+    if (( n == pn )) && { (( pplain )) || [[ -z $z ]]; }; then return 1; fi
+    pn=$n prev=$rank pplain=0
+    [[ -n $z ]] || pplain=1
+  done
+}
 
 valid_branch() {
   [[ $1 =~ $BRANCH_RE ]] || return 1
@@ -267,7 +292,7 @@ cmd_init() {
     fix) (( $# >= 2 )) || usage "$SYN_INIT" ;;
     *) usage "$SYN_INIT" ;;
   esac
-  local v_Branch='' v_Worktree=none v_Size='' v_Agents=none v_Phase='' v_Conventions=none v_Hooks=none v_Map=none v_Issue=none
+  local v_Branch='' v_Worktree=none v_Size='' v_Agents=none v_Phase='' v_Conventions=none v_Hooks=none v_Map=none v_Issue=none v_Gates=none
   local has_branch=0 has_size=0 has_phase=0
   local src=$1
   if [[ $skill == fix ]]; then title=$1; input=("$2"); shift 2; else shift 1; fi
@@ -285,13 +310,15 @@ cmd_init() {
       'Allowed Spec Kit hooks') v_Hooks=$value ;;
       Map) v_Map=$value ;;
       Issue) v_Issue=$value ;;
-      *) usage "unknown field $name (fields: Branch, Worktree, Size, Agents, Current phase, Conventions, Allowed Spec Kit hooks, Map, Issue)" ;;
+      Gates) v_Gates=$value ;;
+      *) usage "unknown field $name (fields: Branch, Worktree, Size, Agents, Current phase, Conventions, Allowed Spec Kit hooks, Map, Issue, Gates)" ;;
     esac
   done
   (( has_branch )) || die "init needs Branch=<value>"
   (( has_size )) || die "init needs Size=<value>"
   (( has_phase )) || die "init needs Current phase=<value>"
   valid_size "$v_Size" || die "Size must be small, medium, large or not set, not: $v_Size"
+  canon_gates "$skill" "$v_Gates" || die "Gates must be none or canonical $skill gate tokens, not: $v_Gates"
   no_symlink "$f"
   if [[ -e $f ]]; then die "$f exists"; fi
   if [[ $skill == feat ]]; then
@@ -319,6 +346,7 @@ cmd_init() {
     "- Allowed Spec Kit hooks: $v_Hooks"
     "- Map: $v_Map"
     "- Issue: $v_Issue"
+    "- Gates: $v_Gates"
     '' "$sect" '')
   if (( ${#input[@]} > 0 )); then L+=("${input[@]}" ''); fi
   L+=('## Log' '')
@@ -490,8 +518,15 @@ cmd_shipped_verdict() {
 }
 
 cmd_phase2_mode() {
-  one_file "$@"
-  local i j p=-1 rest g
+  local i j p=-1 rest g=''
+  # An optional gate (3 or 4) names the gate carrying a soft phase 2's
+  # summary (step.sh passes it); without it, the Size rule below.
+  if (( $# == 2 )); then
+    case $2 in 3 | 4) g=$2 ;; *) usage 'state.sh phase2-mode <state file> [<3|4>]' ;; esac
+    set -- "$1"
+  fi
+  (( $# == 1 )) || usage 'state.sh phase2-mode <state file> [<3|4>]'
+  load "$1"
   log_lines
   for (( i = 0; i < ${#G[@]}; i++ )); do
     case ${G[i]} in
@@ -512,12 +547,14 @@ cmd_phase2_mode() {
       rest=${rest#' — '}
       if ! [[ $rest =~ $SOFT_RE ]]; then echo hard; return; fi ;;
   esac
-  field Size
-  case $V in
-    small | medium | normal) g=4 ;;
-    large | big) g=3 ;;
-    *) die "no valid Size: line in $1" ;;
-  esac
+  if [[ -z $g ]]; then
+    field Size
+    case $V in
+      small | medium | normal) g=4 ;;
+      large | big) g=3 ;;
+      *) die "no valid Size: line in $1" ;;
+    esac
+  fi
   for (( i = p + 1; i < ${#G[@]}; i++ )); do
     if [[ ${G[i]} == "- [x] $g "* ]] && gate_passed "$i"; then echo "soft $g closed"; return; fi
   done

@@ -1,0 +1,4 @@
+hard:
+- large
+- gates: hard
+answer call:	3	@TOP@/specs/x/reports/3-plan.md	sum=3-plan.md:@SUM@

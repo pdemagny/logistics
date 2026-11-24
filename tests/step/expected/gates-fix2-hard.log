@@ -1,0 +1,9 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 2 Fix
+# /fix state: a reported bug
+--
+- [x] 2 implementer — not verified:
+    - n/a → live run → no credentials
+    - wrote: specs/x/fix.md
+- [x] 2 Fix [hard] — gates: hard

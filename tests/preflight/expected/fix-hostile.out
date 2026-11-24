@@ -5,6 +5,7 @@ author: user
 install: ok
 bug extension: 1.4.2
 board: off
+gates: none
 default: main
 fetch: ok
 hooks allowed: none

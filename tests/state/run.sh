@@ -174,10 +174,56 @@ new_case "init feat: golden"
 # shellcheck disable=SC2016
 run init feat "$work/i1/specs/state-script/feat-state.md" "$fx/brief.md" \
   'Branch=state-script' 'Worktree=/tmp/wt/state-script' 'Size=small' 'Current phase=2 Specify' \
-  'Conventions=conventional commits; it'\''s `type(scope)`' 'Issue=#27'
+  'Conventions=conventional commits; it'\''s `type(scope)`' 'Issue=#27' \
+  'Gates=feat.3=hard feat.6.large=soft'
 expect_ok ""
 out="$(cat "$work/i1/specs/state-script/feat-state.md")"
 expect_file "$ex/init-feat.md"
+ok
+
+new_case "init: Gates field"
+# Gates= takes none or the init skill's canonical tokens; without it, none.
+for c in "feat|none" "feat|feat.2=soft" "feat|feat.4.small=hard feat.4.large=soft" \
+  "feat|feat.3=hard feat.4.small=hard feat.4.medium=soft feat.4.large=hard feat.7=soft" \
+  "fix|fix.1=soft fix.4.large=hard"; do
+  sk="${c%%|*}" val="${c#*|}"
+  command rm -rf -- "$work/ig"
+  if [ "$sk" = feat ]; then
+    run init feat "$work/ig/feat-state.md" "$fx/brief.md" Branch=b Size=small 'Current phase=2 Specify' "Gates=$val"
+  else
+    run init fix "$work/ig/feat-state.md" t r Branch=b Size=small 'Current phase=1 Assess' "Gates=$val"
+  fi
+  expect_ok ""
+  [ "$(sed -n 11p "$work/ig/feat-state.md")" = "- Gates: $val" ] || fail "$val: no Gates line after Issue"
+  [ "$(sed -n 10p "$work/ig/feat-state.md")" = "- Issue: none" ] || fail "$val: Issue line moved"
+done
+command rm -rf -- "$work/ig"
+run init fix "$work/ig/feat-state.md" t r Branch=b Size=small 'Current phase=1 Assess'
+expect_ok ""
+grep -qxF -- '- Gates: none' "$work/ig/feat-state.md" || fail "no default Gates: none"
+# Refused: a bad token, the other skill's, a duplicate, out of order, plain
+# and sized for one phase, an unsettable phase, auto, spacing.
+for c in "feat|feat.3=maybe" "feat|fix.1=soft" "feat|feat.3=hard feat.3=hard" \
+  "feat|feat.6=soft feat.3=hard" "feat|feat.4.large=soft feat.4.small=hard" \
+  "feat|feat.4=hard feat.4.large=soft" "feat|feat.4.large=soft feat.4=hard" \
+  "feat|feat.8=hard" "feat|feat.1=soft" "fix|fix.5=hard" "feat|feat.3=auto" \
+  "feat|feat.3.huge=soft" "feat|feat.3=hard  feat.4=soft" "feat| feat.3=hard" "feat|" \
+  "fix|feat.3=hard" "fix|fix.4.large=hard fix.4.large=hard"; do
+  sk="${c%%|*}" val="${c#*|}"
+  if [ "$sk" = feat ]; then
+    run init feat "$work/ib/feat-state.md" "$fx/brief.md" Branch=b Size=small 'Current phase=2 Specify' "Gates=$val"
+  else
+    run init fix "$work/ib/feat-state.md" t r Branch=b Size=small 'Current phase=1 Assess' "Gates=$val"
+  fi
+  expect_error "Gates must be none or canonical $sk gate tokens, not: $val"
+  [ ! -e "$work/ib" ] || fail "$val: a refused init created something"
+done
+# set refuses Gates: the gates are fixed for the run.
+copy feat-old-normal.md gates-set.md
+run set "$f" Gates feat.3=hard
+expect_usage
+[[ "$out" == *"unknown field Gates"* ]] || fail "set took Gates"
+same "$fx/feat-old-normal.md" "$f"
 ok
 
 new_case "init fix: golden, defaults"
@@ -434,6 +480,30 @@ expect_ok "soft 3 open"
 run set "$f" Size 'not set'
 run phase2-mode "$f"
 expect_error "no valid Size: line"
+ok
+
+new_case "phase2-mode: the gate passed"
+# 3 on a small state whose gate 3 stopped (feat.3=hard): open, then closed
+# once the gate is answered; 4 on a large state whose gate 3 merged.
+copy feat-gates.md p2g.md
+run phase2-mode "$f" 3
+expect_ok "soft 3 open"
+run phase2-mode "$f"
+expect_ok "soft 4 open"
+printf '%s\n' '    - answer: approved (user: "ok")' >>"$f"
+run phase2-mode "$f" 3
+expect_ok "soft 3 closed"
+run phase2-mode "$fx/feat-gates-large.md" 4
+expect_ok "soft 4 open"
+run phase2-mode "$fx/feat-gates-large.md"
+expect_ok "soft 3 closed"
+# A gate other than 3 or 4, or a third argument: usage.
+for g in 2 5 x '' 34; do
+  run phase2-mode "$f" "$g"
+  expect_usage
+done
+run phase2-mode "$f" 3 4
+expect_usage
 ok
 
 new_case "refused-base"

@@ -188,7 +188,7 @@ review from the code review on (`/fix` moves a bug's issue the same way:
 [workflow.md](workflow.md#board-moments); `/tiny` the issue it is given or
 creates from its tiny brief: [workflow.md](workflow.md#tiny)). Which moment sets which status:
 [workflow.md](workflow.md#board-tracking). It is off unless the repo has a
-`.logistics.yml` at its root:
+`.logistics.yml` at its root with a `tracker:` section:
 
 ```yaml
 tracker:
@@ -200,7 +200,8 @@ tracker:
     review: In review
 ```
 
-Exactly this shape: comments and quoted values are fine, other keys or
+Exactly this shape: comments and quoted values are fine, other keys
+(but a `gates:` section, [section 7](#7-configure-the-gates-optional)) or
 indents are refused. Commit and push it: `/feat` builds in a worktree
 branched from `origin/<default>`, which only sees what is pushed (without it
 the run says so and skips its moves).
@@ -212,7 +213,7 @@ gh auth refresh -s project
 ```
 
 That scope is broad: it grants read and write on every Projects board your
-account can reach, not just this one. Without the file, nothing calls `gh`
+account can reach, not just this one. Without a `tracker:` section, nothing calls `gh`
 for a board and the scope isn't needed.
 
 On the board, in its workflows:
@@ -239,7 +240,12 @@ label create bug`) to keep issues labelled.
 `Issue:` line decide where the writes go: they can point at any board your
 account can edit and add any issue you can read to it. Each run starts by
 printing the board it will write to (`tracker: ok users/<login>/projects/<n>
-...`); on a repo you didn't write, check that line before going on.
+...`); on a repo you didn't write, check that line before going on. The
+same file can soften that repo's size gates (never a safety reason:
+[section 7](#7-configure-the-gates-optional)); setup shows the gates in
+force and where they come from (`Gates in force (from
+origin/<default>:.logistics.yml): …`): check that line as you check the
+tracker line.
 
 ## 6. Wait for agents (optional)
 
@@ -268,6 +274,35 @@ next call and never spawns it again on its own). Ctrl+B moves the agent to
 the background and the run continues the async way. `install.sh check` sees
 the value only from a Claude Code session ([section 4](#4-check)).
 [`measure.py`](measure.md) shows the effect as `text only after a spawn`.
+
+## 7. Configure the gates (optional)
+
+By default a run's size decides where `/feat` and `/fix` stop for you (a
+large feature stops after the plan, the design review, the tasks, each
+story and the code review). A `gates:` section in the same
+`.logistics.yml`, with or without `tracker:`, changes that per phase,
+for every size or per size:
+
+```yaml
+gates:
+  feat:
+    3: hard                          # always stop after the plan
+    6: { large: soft }               # no stop between stories on large
+    4: { small: hard, large: soft }  # medium stays auto
+  fix:
+    1: "soft"                        # every size
+```
+
+Values are `soft`, `hard` or `auto` (the size's default); `/feat` 2–7 and
+`/fix` 1–4 are settable, ship is not. `soft` lifts only the stop the size
+adds: a finding that needs you, a security finding or any other safety
+reason still stops the run. Comments and quoted values are fine; anything
+else is refused with its line, and the run stops before it starts.
+
+Commit and push it: setup reads it from `origin/<default>`, shows the
+gates in force, and the run keeps them to its end (an edit takes effect on
+the next run). What each setting changes, gate by gate:
+[workflow.md](workflow.md#configuring-the-gates).
 
 ## Updating
 

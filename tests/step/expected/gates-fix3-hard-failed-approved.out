@@ -1,0 +1,15 @@
+answered
+base: same
+spawn: feat-implementer
+  row: 2
+  mode: bug
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/2-fix.md
+  continue: fresh
+  test report: @TOP@/specs/x/test.md
+  still failing: the last item is still missing
+  trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	2	@TOP@/specs/x/reports/2-fix.md
+boundary:	2	@TOP@/specs/x/reports/2-fix.md

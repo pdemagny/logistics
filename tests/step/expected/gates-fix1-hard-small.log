@@ -1,0 +1,6 @@
+- Size: not set
+- Agents: none (every spawn is fresh)
+- Current phase: 1 Assess
+# /fix state: a reported bug
+--
+- [x] 1 Assess [hard] — gates: hard

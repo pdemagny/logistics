@@ -1,0 +1,3 @@
+hard:
+- gates: hard; verdict: verified
+answer call:	3	@TOP@/specs/x/reports/3-test.md	sum=3-test.md:@SUM@

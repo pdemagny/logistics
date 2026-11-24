@@ -8,6 +8,7 @@
 - Allowed Spec Kit hooks: none
 - Map: none
 - Issue: #27
+- Gates: feat.3=hard feat.6.large=soft
 
 ## Brief
 

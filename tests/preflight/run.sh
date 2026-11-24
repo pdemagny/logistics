@@ -10,7 +10,12 @@
 #   <case>/base/.claude/skills/feat/scripts/  a copy of preflight.sh and a
 #                                             stub tracker.sh (its `check`
 #                                             line and exit come from the
-#                                             case's board-line, board-exit)
+#                                             case's board-line, board-exit;
+#                                             its `gates` line and exit from
+#                                             gates-line, gates-exit, and it
+#                                             records its arguments in
+#                                             gates-args, its stdin in
+#                                             gates-stdin)
 #   <case>/base/.claude/agents/               every feat-*.md agent
 #   <case>/home/                              HOME
 # `second_worktree` adds a worktree of the base commit (no brief) for the
@@ -112,6 +117,12 @@ new_case() {
   cp "$src/preflight.sh" "$pf"
   # shellcheck disable=SC2016 # the stub's own text, expanded when it runs
   printf '%s\n' '#!/usr/bin/env bash' 'c="${PF_CASE:?}"' \
+    'if [ "${1:-}" = gates ]; then' \
+    '  printf "%s\n" "$*" >>"$c/gates-args"' \
+    '  cat >"$c/gates-stdin"' \
+    '  if [ -e "$c/gates-line" ]; then cat "$c/gates-line"; else echo "tracker: gates none"; fi' \
+    '  exit "$(cat "$c/gates-exit" 2>/dev/null || echo 0)"' \
+    'fi' \
     'if [ -e "$c/board-line" ]; then cat "$c/board-line"; else echo "tracker: off"; fi' \
     'exit "$(cat "$c/board-exit" 2>/dev/null || echo 0)"' >"$c/base/.claude/skills/feat/scripts/tracker.sh"
   for a in $FEAT_AGENTS; do printf -- '---\nname: feat-%s\n---\n' "$a" >"$c/base/.claude/agents/feat-$a.md"; done
@@ -628,13 +639,27 @@ issue7
 pre feat x
 expect_exit 0
 expect_line 'board: off'
+# The file only has to exist: the stub tracker decides check's line.
 printf 'project: x\n' >"$top/.logistics.yml"
 printf 'tracker: ok users/u/projects/2 (Todo, In progress, In review)\n' >"$PF_CASE/board-line"
 pre fix '#7'
 expect_line 'board: tracker: ok users/u/projects/2 (Todo, In progress, In review)'
 ok
 
+new_case "board: off for a tracker: off check line (no tracker: key)"
+issue7
+printf '%s\n' 'gates:' '  feat:' '    3: hard' >"$top/.logistics.yml"
+printf 'tracker: off (no tracker: in .logistics.yml)\n' >"$PF_CASE/board-line"
+pre feat x
+expect_exit 0
+expect_line 'board: off'
+pre fix '#7'
+expect_exit 0
+expect_line 'board: off'
+ok
+
 new_case "board: a failing check stops before the fetch"
+# The file only has to exist: the stub tracker decides check's line.
 printf 'project: x\n' >"$top/.logistics.yml"
 printf 'tracker: error: board users/u/projects/9 not found\n' >"$PF_CASE/board-line"
 printf '1\n' >"$PF_CASE/board-exit"
@@ -717,6 +742,94 @@ expect_no_key default
 no_git_network
 pre feat x
 git_called fetch || fail "the wrapper logged no fetch"
+ok
+
+# --- gates ---------------------------------------------------------------------------
+
+GATES_YML=('gates:' '  feat:' '    3: hard' '  fix:' '    4: { large: soft }')
+
+new_case "gates: origin's file through tracker.sh gates <skill>, not the checkout's (brief, issue, symptom)"
+issue7
+on_origin .logistics.yml "${GATES_YML[@]}"
+printf '%s\n' 'gates:' '  feat:' '    6: soft' >"$top/.logistics.yml"
+printf 'tracker: gates feat.3=hard\n' >"$PF_CASE/gates-line"
+git -C "$top" show refs/remotes/origin/main:.logistics.yml >/dev/null 2>&1 && fail "origin/main already has the file"
+pre feat x
+expect_exit 0
+expect_line 'gates: feat.3=hard'
+[ "$(cat "$PF_CASE/gates-args")" = 'gates feat' ] || fail "tracker arguments: $(cat "$PF_CASE/gates-args")"
+[ "$(cat "$PF_CASE/gates-stdin")" = "$(printf '%s\n' "${GATES_YML[@]}")" ] || fail "tracker stdin is not origin's blob"
+# the slot: right after board, before default
+[[ "$out" == *$'\nboard: '*$'\ngates: feat.3=hard\ndefault: main\n'* ]] || fail "gates: not between board: and default:"
+command rm -f -- "$PF_CASE/gates-args" "$PF_CASE/gates-stdin"
+printf 'tracker: gates fix.4.large=soft\n' >"$PF_CASE/gates-line"
+for args in "fix #7" 'fix button-crashes slug=button'; do
+  # shellcheck disable=SC2086 # the words are the arguments
+  pre $args
+  expect_exit 0
+  expect_line 'gates: fix.4.large=soft'
+  [ "$(tail -n 1 "$PF_CASE/gates-args")" = 'gates fix' ] || fail "tracker arguments: $(cat "$PF_CASE/gates-args")"
+  [ "$(cat "$PF_CASE/gates-stdin")" = "$(printf '%s\n' "${GATES_YML[@]}")" ] || fail "tracker stdin is not origin's blob"
+done
+ok
+
+new_case "gates: no file on origin gives none, tracker.sh not called; a checkout-only file is not read"
+issue7
+printf '%s\n' 'gates:' '  feat:' '    3: hard' >"$top/.logistics.yml"
+for args in 'feat x' "fix #7" 'fix button-crashes slug=button'; do
+  # shellcheck disable=SC2086 # the words are the arguments
+  pre $args
+  expect_exit 0
+  expect_line 'gates: none'
+done
+[ ! -e "$PF_CASE/gates-args" ] || fail "tracker.sh gates called with no file on origin"
+ok
+
+new_case "gates: the parser's error stops with origin's name (exit 1)"
+issue7
+on_origin .logistics.yml 'gates:' '  feat:' '    8: soft'
+printf 'tracker: error: .logistics.yml line 3: feat.8 is not settable (feat 2-7, fix 1-4)\n' >"$PF_CASE/gates-line"
+printf '1\n' >"$PF_CASE/gates-exit"
+pre feat x
+expect_exit 1
+expect_last 'stop: origin/main:.logistics.yml line 3: feat.8 is not settable (feat 2-7, fix 1-4)'
+expect_no_key gates
+expect_no_key 'hooks allowed'
+pre fix '#7'
+expect_exit 1
+expect_last 'stop: origin/main:.logistics.yml line 3: feat.8 is not settable (feat 2-7, fix 1-4)'
+expect_no_key slug
+ok
+
+new_case "gates: the real tracker.sh parses origin's section"
+issue7
+cp "$src/tracker.sh" "$src/secret-scan.sh" "$c/base/.claude/skills/feat/scripts/"
+on_origin .logistics.yml '# repo gates' 'gates:' '  feat:' '    3: hard' '    6: { large: soft, small: hard }  # note' \
+  '  fix:' '    4: { large: soft }'
+pre feat x
+expect_exit 0
+expect_line 'gates: feat.3=hard feat.6.small=hard feat.6.large=soft'
+pre fix '#7'
+expect_exit 0
+expect_line 'gates: fix.4.large=soft'
+# quickstart step 3.4: a malformed origin blob stops setup with its line
+on_origin .logistics.yml 'gates:' '  feat:' '    8: soft'
+pre feat x
+expect_exit 1
+expect_last 'stop: origin/main:.logistics.yml line 3: feat.8 is not settable (feat 2-7, fix 1-4)'
+golden gates-malformed
+ok
+
+new_case "gates: resume and rebase print no gates: line"
+on_origin .logistics.yml "${GATES_YML[@]}"
+printf '%s\n' "${GATES_YML[@]}" >"$top/.logistics.yml"
+for args in 'feat resume' 'feat rebase' 'fix resume' 'fix rebase'; do
+  # shellcheck disable=SC2086 # the words are the arguments
+  pre $args
+  expect_exit 0
+  expect_no_key gates
+done
+[ ! -e "$PF_CASE/gates-args" ] || fail "tracker.sh gates called on resume or rebase"
 ok
 
 # --- hooks ---------------------------------------------------------------------------
@@ -1103,7 +1216,19 @@ case_run 0 wt-flag fix worktree 12-save on
 pre feat worktree x off
 expect_exit 0
 expect_no_key flag
-printf 'project: x\n' >"$top/.logistics.yml"
+printf '%s\n' 'tracker:' '  project: x' >"$top/.logistics.yml"
+pre feat worktree x on
+expect_no_key flag
+ok
+
+new_case "worktree: the flag line when the worktree's .logistics.yml has no tracker: key"
+printf '%s\n' '# tracker: off here' 'gates:' '  feat:' '    3: hard' >"$top/.logistics.yml"
+pre fix worktree 12-save on
+expect_exit 0
+expect_line 'flag: - [!] tracker: .logistics.yml in the worktree has no tracker: key; commit and push it (board moves skipped)'
+pre feat worktree x off
+expect_no_key flag
+printf '%s\r\n' 'gates:' 'tracker:  # on' '  project: x' >"$top/.logistics.yml"
 pre feat worktree x on
 expect_no_key flag
 ok

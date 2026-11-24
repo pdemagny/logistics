@@ -6,11 +6,12 @@
 #   tracker.sh read-issue <ref>
 #   tracker.sh create-issue <brief-file | assessment-file> <owner/repo confirmed by the user>
 #   tracker.sh set-status <brief|building|review> <ref>
+#   tracker.sh gates <feat|fix>        (the config text on stdin; no gh, no repo)
 #
 # One line on stdout ("tracker: ..." or read-issue's JSON), nothing on
 # stderr. Exit 0 ok/off/no change, 1 failure, 2 usage error. Only gh is
 # called; the config is untrusted: nothing from it is evaluated, and values
-# reach gh only as -f/-F variables of the fixed documents below.
+# reach gh only as -f/-F variables of the fixed documents below. Bash 3.2.
 set -euo pipefail
 
 user_lc_all="${LC_ALL-}"
@@ -23,7 +24,7 @@ RE_REF_SHORT='^#([1-9][0-9]{0,9})$'
 RE_REF_FULL='^([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9._-]{1,100})#([1-9][0-9]{0,9})$'
 RE_REPO='^([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9._-]{1,100})$'
 RE_ID='^[A-Za-z0-9_=-]{1,200}$'
-RE_KEY='^( *)([a-z]+):(.*)$'
+RE_KEY='^( *)([a-z0-9]+):(.*)$'
 RE_SKIP_LINE='^ *(#.*)?$'
 RE_ISSUE_URL='^https://github\.com/([A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100})/issues/([1-9][0-9]{0,9})$'
 RE_AFTER_QUOTE='^ *(#.*)?$'
@@ -116,7 +117,7 @@ J_SET='.data.updateProjectV2ItemFieldValue.projectV2Item.id'
 say() { printf 'tracker: %s\n' "$1"; }
 die() { say "error: $1"; exit "${2:-1}"; }
 usage() {
-  die "usage: tracker.sh check | read-issue <ref> | create-issue <brief-file | assessment-file> <owner/repo> | set-status <brief|building|review> <ref>" 2
+  die "usage: tracker.sh check | read-issue <ref> | create-issue <brief-file | assessment-file> <owner/repo> | set-status <brief|building|review> <ref> | gates <feat|fix>" 2
 }
 
 # Invisible format characters, as UTF-8 bytes (so any locale matches them):
@@ -140,8 +141,23 @@ clean() (
 
 # --- config -----------------------------------------------------------------
 
-declare -A st=() # statuses.<key> -> board option name
+# statuses.<key> -> board option name (status_name <key> reads them)
+st_brief="" st_building="" st_review=""
 kind="" login="" number="" board_ref=""
+# The gates section's cells: " <skill>.<n>=<v> " or " <skill>.<n>.<size>=<v> ".
+gcells=" "
+# 1 once parse_config has read a tracker section (board tracking on).
+has_tracker=0
+
+# status_name <brief|building|review>: sets $sname.
+sname=""
+status_name() {
+  case "$1" in
+    brief) sname="$st_brief" ;;
+    building) sname="$st_building" ;;
+    review) sname="$st_review" ;;
+  esac
+}
 
 cfg_err() { die ".logistics.yml line $1: $2"; }
 
@@ -174,8 +190,86 @@ no_value() {
   case "$r" in "" | \#*) ;; *) cfg_err "$2" "$3 takes no value" ;; esac
 }
 
+# gate_word <text> : sets $val to the text unquoted ("x", 'x' or x), or
+# empty when the quotes are unbalanced; the caller checks it is a value.
+gate_word() {
+  local w="$1" q
+  val=""
+  case "$w" in
+    \"* | \'*)
+      q="${w:0:1}"
+      [ "${#w}" -ge 2 ] && [ "${w: -1}" = "$q" ] || return 0
+      val="${w:1:${#w}-2}"
+      ;;
+    *) val="$w" ;;
+  esac
+}
+
+# trim <text>: sets $val to the text without leading or trailing spaces.
+trim() {
+  val="${1#"${1%%[! ]*}"}"
+  val="${val%"${val##*[! ]}"}"
+}
+
+# gate_value <text after "<n>:"> <line no> <skill> <n>: a phase's value, a
+# plain soft|hard|auto or a one-line { <size>: <value>, ... } mapping; adds
+# its non-auto cells to $gcells. Nothing from inside the value is echoed but
+# a size key that matched ^[a-z]+$.
+gate_value() {
+  local r="$1" ln="$2" p="gates.$3.$4" t="$3.$4" inner after pair k v sizes=" "
+  local must="$p must be soft, hard, auto or { <size>: <value>, ... } on one line"
+  [ -z "$r" ] || [[ "$r" == " "* ]] || cfg_err "$ln" "no space after the colon"
+  trim "$r"
+  r="$val"
+  if [[ "$r" == "{"* ]]; then
+    [[ "$r" == *"}"* ]] || cfg_err "$ln" "$must"
+    inner="${r#\{}"
+    inner="${inner%%\}*}"
+    after="${r#*\}}"
+    [[ "$after" =~ $RE_AFTER_QUOTE ]] || cfg_err "$ln" "bad size mapping in $p"
+    trim "$inner"
+    [ -n "$val" ] || cfg_err "$ln" "empty size mapping in $p"
+    inner="$val,"
+    while [ -n "$inner" ]; do
+      pair="${inner%%,*}"
+      inner="${inner#*,}"
+      [[ "$pair" == *:* ]] || cfg_err "$ln" "bad size mapping in $p"
+      trim "${pair%%:*}"
+      k="$val"
+      [[ "$k" =~ ^[a-z]+$ ]] || cfg_err "$ln" "bad size mapping in $p"
+      case "$k" in small | medium | large) ;; *) cfg_err "$ln" "unknown size $k in $p (small, medium or large)" ;; esac
+      [[ "$sizes" != *" $k "* ]] || cfg_err "$ln" "duplicate $p.$k"
+      sizes="$sizes$k "
+      trim "${pair#*:}"
+      gate_word "$val"
+      v="$val"
+      case "$v" in soft | hard | auto) ;; *) cfg_err "$ln" "$p.$k must be soft, hard or auto" ;; esac
+      [ "$v" = auto ] || gcells="$gcells$t.$k=$v "
+    done
+    return 0
+  fi
+  case "$r" in
+    \"* | \'*)
+      inner="${r:1}"
+      [[ "$inner" == *"${r:0:1}"* ]] || cfg_err "$ln" "$must"
+      after="${inner#*"${r:0:1}"}"
+      [[ "$after" =~ $RE_AFTER_QUOTE ]] || cfg_err "$ln" "$must"
+      v="${inner%%"${r:0:1}"*}"
+      ;;
+    *)
+      v="${r%% #*}"
+      v="${v%"${v##*[! ]}"}"
+      ;;
+  esac
+  case "$v" in soft | hard | auto) ;; *) cfg_err "$ln" "$must" ;; esac
+  [ "$v" = auto ] || gcells="$gcells$t=$v "
+}
+
+# parse_config: reads $config (tracker and gates, each optional, any order).
+# Sets the tracker values (their checks only when tracker is present) and
+# $gcells.
 parse_config() {
-  local line n=0 indent key rest path section="" seen=" " k
+  local line n=0 indent key rest path top="" skill="" section="" seen=" " k
   while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
     line="${line%$'\r'}"
@@ -183,47 +277,89 @@ parse_config() {
     [[ "$line" != *$'\t'* ]] || cfg_err "$n" "tab in a key line"
     [[ "$line" =~ $RE_KEY ]] || cfg_err "$n" "not a key: value line"
     indent="${#BASH_REMATCH[1]}" key="${BASH_REMATCH[2]}" rest="${BASH_REMATCH[3]}"
+    case "$indent" in 0 | 2 | 4) ;; *) cfg_err "$n" "bad indentation (0, 2 or 4 spaces)" ;; esac
     case "$indent:$key" in
-      0:tracker)
-        path=tracker
-        # first key line must be tracker
-        [ "$seen" = " " ] || [[ "$seen" == *" tracker "* ]] || cfg_err "$n" "tracker must be the first key"
-        ;;
+      0:tracker | 0:gates) path="$key" top="$key" skill="" section="" ;;
       2:provider | 2:project | 2:statuses)
         path="tracker.$key"
-        [[ "$seen" == *" tracker "* ]] || cfg_err "$n" "$key outside tracker"
+        [ "$top" = tracker ] || cfg_err "$n" "$key outside tracker"
         section=""
         ;;
       4:brief | 4:building | 4:review)
         path="tracker.statuses.$key"
-        [ "$section" = statuses ] || cfg_err "$n" "$key outside statuses"
+        [ "$top" = tracker ] && [ "$section" = statuses ] || cfg_err "$n" "$key outside statuses"
         ;;
-      0:* | 2:* | 4:*) cfg_err "$n" "unknown key" ;;
-      *) cfg_err "$n" "bad indentation (0, 2 or 4 spaces)" ;;
+      2:feat | 2:fix)
+        path="gates.$key"
+        [ "$top" = gates ] || cfg_err "$n" "$key outside gates"
+        skill="$key"
+        ;;
+      4:feat | 4:fix)
+        if [ "$top" = gates ]; then cfg_err "$n" "unknown key"; fi
+        cfg_err "$n" "$key outside gates"
+        ;;
+      0:feat | 0:fix) cfg_err "$n" "$key outside gates" ;;
+      2:* | 4:*)
+        if [[ "$key" =~ ^[0-9]+$ ]]; then
+          [ "$indent" = 4 ] && [ "$top" = gates ] && [ -n "$skill" ] ||
+            cfg_err "$n" "$key outside gates.feat or gates.fix"
+          case "$skill:$key" in
+            feat:[2-7] | fix:[1-4]) ;;
+            *) cfg_err "$n" "$skill.$key is not settable (feat 2-7, fix 1-4)" ;;
+          esac
+          path="gates.$skill.$key"
+        elif [ "$indent" = 2 ] && [ "$top" = gates ]; then
+          cfg_err "$n" "unknown skill $key (feat or fix)"
+        else
+          cfg_err "$n" "unknown key"
+        fi
+        ;;
+      *) cfg_err "$n" "unknown key" ;;
     esac
     [[ "$seen" != *" $path "* ]] || cfg_err "$n" "duplicate $path"
     seen="$seen$path "
-    case "$key" in
-      tracker) no_value "$rest" "$n" "$path" ;;
-      statuses) no_value "$rest" "$n" "$path"; section=statuses ;;
-      provider)
+    case "$path" in
+      tracker | gates | gates.feat | gates.fix) no_value "$rest" "$n" "$path" ;;
+      tracker.statuses) no_value "$rest" "$n" "$path"; section=statuses ;;
+      tracker.provider)
         parse_value "$rest" "$n" "$path"
         [ "$val" = github ] || cfg_err "$n" "provider must be github"
         ;;
-      project)
+      tracker.project)
         parse_value "$rest" "$n" "$path"
         [[ "$val" =~ $RE_URL ]] || cfg_err "$n" "project must be https://github.com/users|orgs/<login>/projects/<number>"
         kind="${BASH_REMATCH[1]}" login="${BASH_REMATCH[2]}" number="${BASH_REMATCH[3]}"
         ;;
-      brief | building | review) parse_value "$rest" "$n" "$path"; st[$key]="$val" ;;
+      tracker.statuses.brief) parse_value "$rest" "$n" "$path"; st_brief="$val" ;;
+      tracker.statuses.building) parse_value "$rest" "$n" "$path"; st_building="$val" ;;
+      tracker.statuses.review) parse_value "$rest" "$n" "$path"; st_review="$val" ;;
+      gates.*) gate_value "$rest" "$n" "$skill" "$key" ;;
     esac
   done <"$config"
+  [[ "$seen" == *" tracker "* ]] || return 0
+  has_tracker=1
   for k in tracker tracker.provider tracker.project tracker.statuses \
     tracker.statuses.brief tracker.statuses.building tracker.statuses.review; do
     [[ "$seen" == *" $k "* ]] || die ".logistics.yml: missing $k"
   done
   [[ "$number" =~ ^[0-9]+$ ]] || die ".logistics.yml: bad project number"
   board_ref="$kind/$login/projects/$number"
+}
+
+# cmd_gates <skill>: the skill's non-auto cells, canonical (phases
+# ascending; a plain token, or size tokens in small, medium, large order).
+cmd_gates() {
+  local n t out="" s v
+  for n in 1 2 3 4 5 6 7; do
+    for t in "$1.$n" "$1.$n.small" "$1.$n.medium" "$1.$n.large"; do
+      [[ "$gcells" == *" $t="* ]] || continue
+      s="${gcells#*" $t="}"
+      v="${s%% *}"
+      out="$out $t=$v"
+    done
+  done
+  [ -n "$out" ] || out=" none"
+  say "gates ${out# }"
 }
 
 # --- gh plumbing --------------------------------------------------------------
@@ -325,7 +461,7 @@ board_problem() {
 opt=""
 option_id() {
   local i
-  for i in "${!opt_names[@]}"; do
+  for i in ${opt_names[@]+"${!opt_names[@]}"}; do
     if [ "${opt_names[$i]}" = "$1" ]; then
       opt="${opt_ids[$i]}"
       return 0
@@ -348,10 +484,12 @@ cmd_check() {
       in_body=1
     else
       name="${line%%:*}"
-      if [ "${name,,}" = x-oauth-scopes ]; then
-        have_scopes=1
-        scopes="${line#*:}"
-      fi
+      case "$name" in
+        [Xx]-[Oo][Aa][Uu][Tt][Hh]-[Ss][Cc][Oo][Pp][Ee][Ss])
+          have_scopes=1
+          scopes="${line#*:}"
+          ;;
+      esac
     fi
   done <<<"$gh_out"
   if [ "$have_scopes" = 1 ] && [[ ! "$scopes" =~ $RE_SCOPE_PROJECT ]]; then
@@ -360,10 +498,11 @@ cmd_check() {
   read_rows "$body"
   if board_problem; then die "$reason"; fi
   for k in brief building review; do
-    option_id "${st[$k]}" || unknown+="unknown status \"$(clean "${st[$k]}")\" (statuses.$k); "
+    status_name "$k"
+    option_id "$sname" || unknown+="unknown status \"$(clean "$sname")\" (statuses.$k); "
   done
   if [ -n "$unknown" ]; then
-    for i in "${!opt_names[@]}"; do
+    for i in ${opt_names[@]+"${!opt_names[@]}"}; do
       if [ "$i" -ge 10 ]; then
         list+=", ..."
         break
@@ -373,7 +512,7 @@ cmd_check() {
     done
     die "${unknown}board options: ${list:-none}"
   fi
-  say "ok $board_ref ($(clean "${st[brief]}"), $(clean "${st[building]}"), $(clean "${st[review]}"))"
+  say "ok $board_ref ($(clean "$st_brief"), $(clean "$st_building"), $(clean "$st_review"))"
 }
 
 cmd_read_issue() {
@@ -556,7 +695,8 @@ set_attempt() {
 ref=""
 cmd_set_status() {
   local name rc=0 delay="${TRACKER_RETRY_DELAY:-2}"
-  name="${st[$1]}"
+  status_name "$1"
+  name="$sname"
   ref="$2"
   parse_ref "$ref"
   added=0
@@ -590,6 +730,15 @@ case "$sub" in
     [ "$#" -eq 2 ] || usage
     case "$1" in brief | building | review) ;; *) usage ;; esac
     ;;
+  gates)
+    [ "$#" -eq 1 ] || usage
+    case "$1" in feat | fix) ;; *) usage ;; esac
+    # The config text on stdin: no repo read, no gh.
+    config=/dev/stdin
+    parse_config
+    cmd_gates "$1"
+    exit 0
+    ;;
   *) usage ;;
 esac
 
@@ -602,6 +751,11 @@ if [ ! -e "$config" ]; then
 fi
 [ -f "$config" ] && [ -r "$config" ] || die ".logistics.yml is not a readable file"
 parse_config
+# A file with gates only (or neither key): tracking off, no gh call.
+if [ "$has_tracker" = 0 ]; then
+  say "off (no tracker: in .logistics.yml)"
+  exit 0
+fi
 
 command -v gh >/dev/null 2>&1 || die "gh not found; install it (https://cli.github.com)"
 trap cleanup EXIT

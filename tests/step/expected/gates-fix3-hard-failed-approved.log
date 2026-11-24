@@ -1,0 +1,7 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 2 Fix
+# /fix state: a reported bug
+--
+    - answer: approved (user: "retry")
+- [x] 3 Test [soft] — failed (retry 1 of 1): the last item is still missing; retry fix
