@@ -1,0 +1,16 @@
+answered
+base: same
+untracked, not in the diff: specs/x/feat-state.md
+untracked, not in the diff: src/new.sh
+diff: git diff @SHA@
+spawn: feat-code-reviewer
+  row: 4a+4b+4d
+  mode: review
+  lenses: 7a+7b+7d
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/4-7a+7b+7d.md
+  continue: fresh
+  diff: git diff @SHA@
+  diff file: @TOP@/specs/x/reports/review.diff
+boundary:	4	@TOP@/specs/x/reports/4-7a+7b+7d.md	snapshot=@SNAP@

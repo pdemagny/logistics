@@ -62,9 +62,10 @@ The card stays where it is: `/brief` and `/fix` move it.
    part of `git symbolic-ref refs/remotes/origin/HEAD` (unset → `git
    remote set-head origin --auto` first). No `origin` → no fetch, rebase
    or push: the run ends with the commit.
-2. **Board tracking**, only when `<repo root>/.logistics.yml` exists: run
-   `bash <tracker.sh> check`. Exit ≠ 0 → stop and show its line; else show
-   it.
+2. **Board tracking**, only when `<repo root>/.logistics.yml` has a `tracker:` key: run
+   `bash <tracker.sh> check`. Exit ≠ 0 → stop and show its line;
+   `tracker: off …` means the file has no `tracker:` key: no board move
+   here; else show it.
 3. The argument:
    - an issue (`#N`, `owner/repo#N`, a URL): with board tracking
      `read-issue <ref>` (a URL becomes `owner/repo#N`, or `#N` for this
@@ -85,8 +86,8 @@ The card stays where it is: `/brief` and `/fix` move it.
 5. The tiny check.
 6. `git fetch origin <default>`, EnterWorktree, then rename the branch
    `tiny-<short-name>` (`git branch -m`). With board tracking and no
-   `.logistics.yml` in the worktree: say "commit and push .logistics.yml;
-   board moves skipped" and make none.
+   `tracker:` key in the worktree's `.logistics.yml`: say "commit and push
+   .logistics.yml; board moves skipped" and make none.
 7. Write the tiny brief to `specs/briefs/<short-name>.md` in the worktree
    (taken → `-2`, `-3`, …): `/brief`'s format with fewer sections. For a
    bug, Why is the symptom and Behaviour what holds once fixed.

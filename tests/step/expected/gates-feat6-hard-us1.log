@@ -1,0 +1,9 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 6 Implement
+# /feat state: Test feature
+--
+- [x] 6 US1 — not verified:
+    - T004 → manual run → no terminal
+    - wrote: src/new.sh
+- [x] 6 Implement [hard] — US1: gates: hard

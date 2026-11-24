@@ -229,6 +229,17 @@ in the same turn. Silence or an ambiguous reply is not approval; ask.
 make a soft gate hard (Step script, Override); `step.sh` decides every
 other gate.
 
+**Gates in force.** Setup's `gates:` line, when not `none`, is shown in
+one line: `Gates in force (from origin/<default>:.logistics.yml):
+<value>`, `<default>` being setup's `default:` value. That value goes to
+`S init` as `'Gates=<value>'` (`none` when the line said so). The gates
+are fixed for the run: an edit of the file takes effect on the next run,
+once pushed. A `gates: hard` reason (on its own or after a prefix, or
+`gates: hard; verdict: <v>`) means the repository sets this gate to stop:
+wherever the skill renders a gate differently for `large` (the title, the
+findings listed), read "`large` or `gates: hard`". A `gates: soft`
+segment on a soft line means the repository softened a size gate.
+
 **Size changes.** A size increase is always a hard gate, whichever step
 finds it (`step.sh` makes it hard): name the old and new size, why, and what
 changes in the later steps, and wait for a yes (`size <s>`); any other
@@ -317,6 +328,7 @@ the state file with Edit or Write.
 - Allowed Spec Kit hooks: <list or "none">
 - Map: <the *Map line*>
 - Issue: <the *issue ref*, if any>
+- Gates: <setup's gates: value>
 
 ## <the *input section*>
 
@@ -349,7 +361,11 @@ final message.
 
 ## Board moves
 
-**Board moves**, only when `<repo root>/.logistics.yml` exists. The script
+**Board moves**, only when setup's `board:` line is not `off` (on resume:
+when `check` exits 0 and its line does not start with `tracker: off`).
+Resume prints no `board:` line, so there the raw `check` line decides: a
+`tracker: off (no .logistics.yml)` or `tracker: off (no tracker: in
+.logistics.yml)` line means no move and no `[!]` line. The script
 is `bash <the *tracker script*>`; if it is missing,
 stop: "board tracking needs this script; install or update logistics'
 `feat` skill". A move is `set-status

@@ -69,7 +69,8 @@ the work outgrew it): its why, behaviour and acceptance stand, the
 interview asks only for the rest, and the full brief keeps its short name
 and issue. `/feat` refuses a tiny brief and points here or to `/tiny`.
 
-**Board tracking** (optional): with a `.logistics.yml` at the repo root,
+**Board tracking** (optional): with a `tracker:` section in `.logistics.yml`
+at the repo root,
 `/brief` and `/feat` move the issue across a GitHub Projects board (Brief,
 In progress, In review; Done when the PR merges). Each run first prints the
 board it will write to. A brief without an issue gets one created after you
@@ -138,7 +139,7 @@ leaves every `skip`; a `user` finding needs its own answer. A size increase is a
 own; a decrease is applied and logged.
 
 When the spec leaves no question open, phase 2 doesn't stop. The next gate
-(phase 3 on large) opens with the spec, the specifier's assumptions and the
+(phase 3 on large, by default) opens with the spec, the specifier's assumptions and the
 checklist question, and "ok" accepts those too. A spec change you ask for
 there is written by the planner together with the findings; "back to 2" is
 for a rewrite.
@@ -298,7 +299,7 @@ Proposed by `/brief`; you decide.
 | tiny   | one reading, no design choice, ~10 files / 300 lines, nothing sensitive              | no `/feat`: [`/tiny`](#a-trivial-change-tiny) in one session, no subagent                                |
 | small  | up to ~30 tasks, no new service, permissions, exposure or dependency; docs-only work | Sonnet at medium effort for most phases, two code reviewers, fewest gates                                |
 | medium | ~31–60 tasks, or a small one adding a service, permissions, exposure or dependency   | Opus for planning, design security, implementation, correctness and security review; five code reviewers |
-| large  | more than ~60 tasks                                                                  | Opus for nearly every phase, higher effort on planning and reviews; gates at 3, 4, 5 and after each story |
+| large  | more than ~60 tasks                                                                  | Opus for nearly every phase, higher effort on planning and reviews; gates at 3, 4, 5 and after each story by default ([configurable](workflow.md#configuring-the-gates)) |
 | huge   | capabilities that could ship on their own                                            | a capability map; one brief, `/feat` run and PR per capability                                           |
 
 Full matrix in [workflow.md](workflow.md#size--phase-matrix).
@@ -346,7 +347,7 @@ so on.
 | `apm` or `specify`: command not found after installing | `uv tool update-shell`, then open a new shell |
 | `/brief`, `/feat`, `/fix` or `/tiny` is not a known command | Restart Claude Code after installing. Installed as a plugin, they are `/logistics:brief` and so on. `install.sh check` lists what is missing ([install.md](install.md#4-check)) |
 | `/fix` stops at setup and names `specify extension add bug` | Run it in the project, then `/fix` again |
-| `tracker: error: …` at the start of a run | Check `.logistics.yml` is committed and pushed, and `gh auth refresh -s project` ([board tracking](install.md#5-board-tracking-optional)) |
+| `tracker: error: …` at the start of a run | Check `.logistics.yml` is committed and pushed, and `gh auth refresh -s project` ([board tracking](install.md#5-board-tracking-optional)); setup's `origin/<default>:.logistics.yml line <n>: …` names a line of the file as pushed (its `gates:` section included): fix that line and push it ([gates](install.md#7-configure-the-gates-optional)) |
 | A `[!] tracker:` line at a gate | A board move failed; the run went on. Move the card by hand |
 | The run ends with a line starting `! cd … && bash … ship.sh prepare …` | The ship script was blocked in the session. Type that line as is: the `!` runs it in Claude Code |
 | The run ends with `! spec-number: error: …` | Nothing was pushed. Fix the cause (usually `gh` auth or network), then `/feat resume` |

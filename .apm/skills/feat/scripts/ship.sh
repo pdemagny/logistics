@@ -736,7 +736,22 @@ move_dir() {
   set_ad "$1"
 }
 
-# number_dir: an unnumbered artifact dir takes the next free number
+# rewrite_own <old rel>: the old path rewritten in the PR's own files outside
+# the artifact dir, the ones the notes commit: changed since HEAD or
+# untracked (not ignored), .specify/feature.json left to rewrite_dir
+rewrite_own() {
+  local p
+  while IFS= read -r -d '' p; do
+    if [[ -z $p || $p == "$AD_REL/"* || $p == "$1/"* || $p == .specify/feature.json ]]; then continue; fi
+    rewrite_file "$TOP/$p" "$1" "$AD_REL"
+  done < <(
+    git diff -z --name-only HEAD 2>/dev/null || true
+    git ls-files -z --others --exclude-standard 2>/dev/null || true
+  )
+}
+
+# number_dir: an unnumbered artifact dir takes the next free number, the old
+# path rewritten in the dir and in the PR's own files
 number_dir() {
   local out rc=0 old
   if [[ $AD_NAME =~ $RE_NUMBERED ]]; then return 0; fi
@@ -748,6 +763,7 @@ number_dir() {
   NUMBER=$out
   NUMBERED=1
   rewrite_dir "$old" "$AD_REL"
+  rewrite_own "$old"
 }
 
 # --- fetch, rebase --------------------------------------------------------------

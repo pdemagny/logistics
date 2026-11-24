@@ -79,8 +79,9 @@ call, and `EnterWorktree`.
 Agents do the work, each phase in a fresh one. Solid orange arrows are gates
 where the run always waits for you; dashed ones wait only when something
 needs your call. The spec stops only on an open question; otherwise you see
-its summary at the plan and design review gate. A large feature also stops
-after the plan, the design review, the tasks, each story and the code review.
+its summary at the plan and design review gate. By default a large feature
+also stops after the plan, the design review, the tasks, each story and the
+code review.
 
 <p align="center"><img src="docs/img/chain.svg" alt="From your idea to a pull request: brief, fresh reader, you confirm; spec, you answer its questions; plan; security, cost, and clarity and fit reviewed in parallel; you check the spec and decide on findings that need you, then spec and plan are amended; tasks and a consistency check; code written one story at a time; correctness, security, performance and over-engineering reviewed in parallel, readability after over-engineering; you decide on findings that need you; pull request. When the pull request conflicts, /feat rebase moves it onto the current main and runs the checks, you decide only on a conflict that changes behaviour, and it is pushed. A huge idea first becomes a capability map, one brief per capability." width="480"></p>
 

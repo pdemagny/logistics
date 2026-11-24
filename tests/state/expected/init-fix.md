@@ -8,6 +8,7 @@
 - Allowed Spec Kit hooks: none
 - Map: none
 - Issue: none
+- Gates: none
 
 ## Report
 

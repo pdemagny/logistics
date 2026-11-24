@@ -486,6 +486,20 @@ subjects
 grep -q '^pr create --base main --head feat-x --title feat(x): add new --body-file ' "$SHIP_CASE/calls" || fail "the title changed"
 ok
 
+new_case "ship: numbering rewrites the PR's own files"
+printf 'See specs/x/plan.md and specs/xy.\n' >>"$top/README.md"
+printf 'Contract: specs/x/contracts/a.md\n' >"$top/docs/guide.md"
+std_notes 'Commit: docs: guide' '- README.md' '- docs/guide.md'
+ship prepare
+want_rc 0
+subjects
+[ "$S" = $'docs(specs): specify x\nfeat(x): add new\ndocs: guide' ] || fail "subjects: $S"
+git -C "$top" show HEAD:README.md | grep -qx 'See specs/001-x/plan.md and specs/xy.' || fail "README.md not rewritten"
+git -C "$top" show HEAD:docs/guide.md | grep -qx 'Contract: specs/001-x/contracts/a.md' || fail "docs/guide.md not rewritten"
+grep -qx 'See specs/001-x for its history.' "$top/docs/notes.md" || fail "docs/notes.md was changed"
+[ -z "$(git -C "$top" status --porcelain -- README.md docs)" ] || fail "a rewritten file is left uncommitted"
+ok
+
 new_case "ship: renumbered at publish"
 std_notes
 ship prepare
@@ -699,6 +713,19 @@ undone
 [[ "$raw" != *"$long"* ]] || fail "the value reached the report"
 [[ "$raw" == *'Left uncommitted: '*docs/extra.md* ]] || fail "the unclaimed file is not on Left uncommitted"
 git -C "$top" status --porcelain | grep -q 'reports' && fail "reports/ shows in git status"
+ok
+
+new_case "stop: a block after numbering puts the PR's own files back"
+printf 'See specs/x/plan.md.\n' >>"$top/README.md"
+command cp -f -p "$top/README.md" "$c/readme.bk"
+printf 'Contract: specs/x/contracts/a.md\n' >"$top/docs/guide.md"
+std_notes 'Commit: docs: guide' '- README.md' '- docs/guide.md'
+printf '%s = %s\n' "$tok" "$long" >>"$top/src/new.sh"
+ship prepare
+blocked '! secret scan: src/new.sh:2 matches key-literal'
+undone
+cmp -s "$c/readme.bk" "$top/README.md" || fail "README.md not put back"
+grep -qx 'Contract: specs/x/contracts/a.md' "$top/docs/guide.md" || fail "docs/guide.md not put back"
 ok
 
 new_case "stop: secret scan cannot be sourced"

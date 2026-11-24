@@ -15,14 +15,14 @@
 # Mode 1 classifies the argument (kind: brief, issue, symptom, resume,
 # rebase, empty, or a refused one), then runs the steps that kind needs:
 # brief lookup and fields, install, board check, default branch and fetch,
-# hooks, issue title and author, slug. Worktree mode checks its arguments,
+# gates, hooks, issue title and author, slug. Worktree mode checks its arguments,
 # the bug dir (/fix), renames the branch and checks .logistics.yml; it makes
 # no network call.
 #
 # Output: `key: value` lines on stdout in a fixed order, whatever order the
 # steps run in: kind, usage, rebase target, brief, candidate, brief in
 # checkout, title, size, size note, short name, map, issue, behaviour,
-# acceptance, github, author, install, bug extension, board, default, fetch,
+# acceptance, github, author, install, bug extension, board, gates, default, fetch,
 # hook won't run, hook would branch or commit, hooks allowed, slug, pointer,
 # searched, spawn note, stop; worktree mode: worktree, branch, flag. Text read from the
 # argument, a brief, an issue or git comes only after its key, on one line,
@@ -62,9 +62,9 @@ slot() {
     'brief in checkout') S=6 ;; title) S=7 ;; size) S=8 ;; 'size note') S=9 ;;
     'short name') S=10 ;; map) S=11 ;; issue) S=12 ;; behaviour) S=13 ;; acceptance) S=14 ;;
     github) S=15 ;; author) S=16 ;; install) S=17 ;; 'bug extension') S=18 ;; board) S=19 ;;
-    default) S=20 ;; fetch) S=21 ;; "hook won't run") S=22 ;; 'hook would branch or commit') S=23 ;;
-    'hooks allowed') S=24 ;; slug) S=25 ;; pointer) S=26 ;; searched) S=27 ;; 'spawn note') S=28 ;; stop) S=99 ;;
-    worktree) S=29 ;; branch) S=30 ;; flag) S=31 ;;
+    gates) S=20 ;; default) S=21 ;; fetch) S=22 ;; "hook won't run") S=23 ;; 'hook would branch or commit') S=24 ;;
+    'hooks allowed') S=25 ;; slug) S=26 ;; pointer) S=27 ;; searched) S=28 ;; 'spawn note') S=29 ;; stop) S=99 ;;
+    worktree) S=30 ;; branch) S=31 ;; flag) S=32 ;;
     *) S=98 ;;
   esac
 }
@@ -354,7 +354,8 @@ bug_version() {
 # --- board, base -----------------------------------------------------------------
 
 # step_board: the skill's `tracker.sh check` when .logistics.yml exists; a
-# failure stops (the board moves of the run would fail)
+# failure stops (the board moves of the run would fail); a `tracker: off …`
+# line (the file has no tracker: key) is `board: off`
 step_board() {
   local o rc=0
   if [ ! -e "$top/.logistics.yml" ]; then
@@ -364,7 +365,23 @@ step_board() {
   o="$(cd "$top" && bash "$SDIR_L/tracker.sh" check 2>&1)" || rc=$?
   first_line "$o"
   [ "$rc" = 0 ] || stop "board check failed: ${L:-tracker.sh check exited $rc}"
-  emit board "${L:-tracker: ok}"
+  case "$L" in
+    'tracker: off'*) emit board off ;;
+    *) emit board "${L:-tracker: ok}" ;;
+  esac
+}
+
+# has_tracker_key <file>: the file has a top-level tracker: key (a line
+# `tracker:` then a space, a `#` or the end, CR stripped). A copy of
+# step.sh's has_tracker_key (it can't be sourced).
+has_tracker_key() {
+  local line re='^tracker:( |#|$)'
+  [ -f "$1" ] || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [[ $line =~ $re ]] && return 0
+  done <"$1"
+  return 1
 }
 
 # default_branch: DEF = origin's default branch. A copy of step.sh's
@@ -404,6 +421,29 @@ step_base() {
     stop "git fetch origin $DEF failed: ${L:-git failed}"
   fi
   emit fetch ok
+}
+
+# step_gates: the gates: section of .logistics.yml as committed on
+# origin/<default> (the tree the run's worktree gets), through tracker.sh's
+# parser (config on stdin, no gh). No file: `none`; a refused section stops
+# with the parser's line, its source named.
+step_gates() {
+  local ref text o rc=0
+  ref="refs/remotes/origin/$DEF:.logistics.yml"
+  if ! git -C "$top" cat-file -e "$ref" 2>/dev/null; then
+    emit gates none
+    return 0
+  fi
+  text="$(git -C "$top" show "$ref" 2>/dev/null)" || stop "can't read origin/$DEF:.logistics.yml"
+  o="$(printf '%s\n' "$text" | bash "$SDIR_L/tracker.sh" gates "$skill" 2>&1)" || rc=$?
+  first_line "$o"
+  if [ "$rc" != 0 ]; then
+    stop "origin/$DEF:${L#tracker: error: }"
+  fi
+  case "$L" in
+    'tracker: gates '?*) emit gates "${L#tracker: gates }" ;;
+    *) stop "origin/$DEF:.logistics.yml: tracker.sh gates printed no gates line" ;;
+  esac
 }
 
 # --- hooks -----------------------------------------------------------------------
@@ -824,6 +864,8 @@ worktree_mode() {
   emit branch "$target"
   if [ "$onoff" = on ] && [ ! -e "$top/.logistics.yml" ]; then
     emit flag "- [!] tracker: .logistics.yml is not in the worktree; commit and push it (board moves skipped)"
+  elif [ "$onoff" = on ] && ! has_tracker_key "$top/.logistics.yml"; then
+    emit flag "- [!] tracker: .logistics.yml in the worktree has no tracker: key; commit and push it (board moves skipped)"
   fi
   flush
   exit 0
@@ -921,12 +963,14 @@ case "$kind" in
     step_install
     step_board
     step_base
+    step_gates
     step_hooks
     ;;
   issue | symptom)
     step_install
     step_board
     step_base
+    step_gates
     step_hooks
     step_issue
     step_slug

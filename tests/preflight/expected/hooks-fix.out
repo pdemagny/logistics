@@ -6,6 +6,7 @@ author: MEMBER
 install: ok
 bug extension: 1.4.2
 board: off
+gates: none
 default: main
 fetch: ok
 hook would branch or commit: before_specify: git.speckit.git.feature → run it by hand: /speckit-git-feature

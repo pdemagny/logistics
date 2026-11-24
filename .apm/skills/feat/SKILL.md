@@ -127,7 +127,8 @@ what you add to each prompt, and what each gate message shows.
      pick one. Run this step again with the chosen path.
    - `kind: brief`: say the brief's path (`brief:`). Keep for phase 2
      `brief:`, `brief in checkout:`, `title:`, `size:`, `short name:`,
-     `map:`, `issue:` and `hooks allowed:`; `board:` for step 4.
+     `map:`, `issue:`, `hooks allowed:` and `gates:`; `board:`, `gates:`
+     and `default:` for step 4 (harness, Gates in force).
    - `kind: resume`: run steps 2 and 3, then the harness's Resume.
    - `kind: rebase`: run steps 2 and 3 (no step 4: `rebase` makes no board
      moves), then read `<this skill's base dir>/references/rebase.md` and
@@ -152,9 +153,11 @@ what you add to each prompt, and what each gate message shows.
    user allowed.
 4. **Board check** (see Board moves): step 1 ran `check` (a failure
    stopped there). A `board:` line other than `off`: show it and say this
-   run's board moves go to that board. Then the building move (phases 2–6;
+   run's board moves go to that board. A `gates:` line other than `none`:
+   show it (harness, Gates in force). Then the building move (phases 2–6;
    review from phase 7), its own `set-status` call. On resume, run `check`
-   here: exit ≠ 0 → stop and show its line.
+   here: exit ≠ 0 → stop and show its line; a line starting `tracker:
+   off` → no board moves this run (harness, Board moves).
 
 ## 2. Specify
 
@@ -169,7 +172,8 @@ what you add to each prompt, and what each gate message shows.
    not `off`), which renames the branch to `<short-name>`, then `S init
    feat '<state file>' '<brief path>' 'Branch=<short-name>'
    'Worktree=<path>' 'Size=<size>' 'Current phase=2 Specify'
-   'Conventions=<…>' 'Allowed Spec Kit hooks=<…>' 'Map=<…>' 'Issue=<…>'`
+   'Conventions=<…>' 'Allowed Spec Kit hooks=<…>' 'Map=<…>' 'Issue=<…>'
+   'Gates=<gates:>'`
    (the brief's title and lines go into it), then `S log` of the setup
    line `- [x] 0 Setup — …` and any `[!]` lines kept so far, then `T feat
    '<state file>' setup`, joined with `&&`. It prints the specifier's
@@ -219,8 +223,9 @@ didn't call for comes back as an assumption with a recommendation and
 written) stops the run. It also reports a size trigger (new service,
 permissions, exposure or dependency).
 
-Small and medium: no gate here; `step.sh` prints phase 4's reviewers.
-**Large**, a hard gate: after a soft phase 2 it opens with the spec block,
+No gate here unless `step.sh` stops (large by default, or the
+repository's gates); otherwise it prints phase 4's reviewers. The gate is
+hard: after a soft phase 2 it opens with the spec block,
 then approach, what it touches, new dependencies or services with reasons,
 constitution check, the planner's assumptions. "ok" accepts the
 recommendations. A spec change asked here is `changed`: give it to the
@@ -235,24 +240,25 @@ gate of this phase starts with the 4c paraphrase from its digest, as
 reported: the user checks it against what they meant (`step.sh`'s
 `paraphrase:` line says whether it contradicts the brief).
 
-On small and medium, one gate covers phases 3 and 4, headed "Plan and
-design review". It shows, in order: after a soft phase 2 the spec block,
+When phase 3 had no gate, one gate covers phases 3 and 4, headed "Plan
+and design review". It shows, in order: after a soft phase 2 the spec block,
 then the paraphrase, approach, what it touches, assumptions, any size
 increase (asked first), then the findings.
 
-**Soft** (small and medium): the paraphrase (after the spec block), then
+**Soft**: the paraphrase (after the spec block), then
 one line `Phase 4 Design review — soft: <step.sh's counts:>; none needs
 your call. Next: phase 5 Tasks`, with the spawn `step.sh` prints: the
 planner continued with the `apply` findings, or the tasker when there is
 none.
 
-**Hard**: titled `Phase 3–4: Plan and design review — needs your call` on
-small and medium (`Phase 4: Design review — needs your call` on large).
-What you should know: `step.sh`'s reasons; on large, a `note: plan amended
-after gate 3` line in one line (what the amend changed). Your call: each
-`user` finding first as "apply or leave?" with the reviewer's why, then
-every other finding with its `rec` (on large too, even when none is
-`user`), per the harness (Review findings, "fix" read as "apply"; its `S`
+**Hard**: titled `Phase 3–4: Plan and design review — needs your call`
+when phase 3 had no gate (`Phase 4: Design review — needs your call` after
+a gate 3). What you should know: `step.sh`'s reasons; after a gate 3, a
+`note: plan amended after gate 3` line in one line (what the amend
+changed). Your call: each `user` finding first as "apply or leave?" with
+the reviewer's why, then every other finding with its `rec` (when the
+reasons hold `large` or `gates: hard`, even when none is `user`), per the
+harness (Review findings, "fix" read as "apply"; its `S`
 notice does not apply here). Spec changes asked at this gate (an
 overturned assumption, a reworded requirement) are `changed`: give them,
 quoted, to the planner amend `step.sh` prints; the picked findings are in
@@ -279,10 +285,12 @@ with the first story, polish with the last). Add the checklist answer from
 phases 2–5. Not in parallel: nothing is committed before phase 8, so a
 separate worktree would miss the spec and earlier stories.
 
-**Soft** after the last story (hard after each one for large): `Phase 6
-Implement — soft: <step.sh's tasks:>`. Under "What you should know" show
-each story's latest `Not verified:` list from the digests (`Not verified:
-none` when empty; for large, the per-story gate shows that story's list).
+**Soft** after the last story (hard after each one on large by default,
+or as the repository's gates say): `Phase 6 Implement — soft: <step.sh's
+tasks:>`. Under "What you should know" show each story's latest `Not
+verified:` list from the digests (`Not verified: none` when empty; at a
+story gate (`US<n>: large` or `US<n>: gates: hard`), it shows that story's
+list).
 A non-empty list is not a surprise. Failing checks get one retry
 (`step.sh` prints it with the failures); then, or on a design problem or a
 report without its `Not verified:` line, a hard gate, recommending a fresh
@@ -308,7 +316,7 @@ first: harness, Review findings).
 
 **Hard**: titled `Phase 7: Code review — needs your call`. What you should
 know: `step.sh`'s reasons and any `untested` criterion. Your call: every
-finding with its `rec` (on large too), `user` first, "ok" rule and
+finding with its `rec` (with `large` or `gates: hard` too), `user` first, "ok" rule and
 follow-up and `S` publication notice per the harness (Review findings).
 Next: review fixes, then phase 8 Ship.
 

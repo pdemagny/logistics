@@ -11,6 +11,7 @@ behaviour: 2 lines
 acceptance: 2 lines
 install: ok
 board: off
+gates: none
 default: main
 fetch: ok
 stop: origin/main:.specify/extensions.yml can't be read as data (line 4); it may hide a hook that commits

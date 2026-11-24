@@ -1,0 +1,5 @@
+hard:
+- US2: gates: hard
+tasks: 1 done, 0 not verified; checks pass
+stories: US1, US2; last
+answer call:	6	@TOP@/specs/x/reports/6-US2.md	sum=6-US2.md:@SUM@

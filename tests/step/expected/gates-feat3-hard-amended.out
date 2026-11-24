@@ -1,0 +1,11 @@
+soft
+base: same
+spawn: feat-design-reviewer
+  row: 4a+4b+4c
+  mode: review
+  lenses: 4a+4b+4c
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/4-4a+4b+4c.md
+  continue: fresh
+boundary:	4	@TOP@/specs/x/reports/4-4a+4b+4c.md	snapshot=@SNAP@

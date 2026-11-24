@@ -1,0 +1,11 @@
+# A gates section with both forms, both skills, comments and quoted values.
+gates:                               # each gate of /feat and /fix
+  feat:
+    6: { large: soft }               # no stop between stories on large
+    3: hard                          # always stop after the plan
+
+    4: { small: "hard", large: 'soft' }
+    7: auto
+  fix:
+    1: "soft"
+    4: {medium:hard,small:auto}  # spaces optional

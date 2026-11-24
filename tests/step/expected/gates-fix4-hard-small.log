@@ -1,0 +1,6 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 4 Code review
+# /fix state: a reported bug
+--
+- [x] 4 Code review [hard] — gates: hard

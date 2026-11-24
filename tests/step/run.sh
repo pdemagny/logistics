@@ -725,7 +725,7 @@ check fix1-untrusted 0
 
 new_case "fix 1 hard: an issue to create (board tracking, Issue: none)" fix
 S set Issue none
-printf 'board: x\n' >"$top/.logistics.yml"
+printf 'tracker:\n  provider: github\n' >"$top/.logistics.yml"
 put bug-assessor/assess-soft 1-assess
 run fix "$sf" 1 "$R"
 check fix1-issue 0
@@ -2557,8 +2557,591 @@ pend="$(grep -nxF -- '- [!] brief left in place: /x/b.md' "$sf" | cut -d: -f1)"
 ans="$(grep -nF -- '    - answer: approved (user: "ok")' "$sf" | cut -d: -f1)"
 [ -n "$pend" ] && [ -n "$ans" ] && [ "$pend" -lt "$ans" ] || fail "the pending line is not in the Log before the answer's lines"
 
+# --- configurable gates (specs/configurable-gates, contracts/gates.md Tests) ---------------
+# A run's Gates: field changes only what its cells say: soft drops the size
+# reason (the gate then reads as on medium), hard adds gates: hard; none and
+# no field give today's output.
+
+# gates_field <value>: `- Gates: <value>` after the state file's `- Issue:`
+# line, where state.sh init writes it (state.sh set refuses the field)
+gates_field() { sed -i "s/^- Issue: .*/&\n- Gates: $1/" "$sf"; }
+
+# keep <name>: the last run's stdout and state-file changes, kept to compare
+keep() {
+  case_log
+  printf '%s\n' "$out" >"$work/keep-$1.out"
+  printf '%s\n' "$LOG" >"$work/keep-$1.log"
+}
+
+# same_run <a> <b>: identical stdout and state-file changes
+same_run() {
+  cmp -s "$work/keep-$1.out" "$work/keep-$2.out" || { out="$(diff "$work/keep-$1.out" "$work/keep-$2.out" || true)"; fail "$1 / $2: stdout differs"; }
+  cmp -s "$work/keep-$1.log" "$work/keep-$2.log" || { out="$(diff "$work/keep-$1.log" "$work/keep-$2.log" || true)"; fail "$1 / $2: state file differs"; }
+}
+
+# verdict_of <name> [plan3]: VD = the kept run's verdict, its reasons, the
+# Current phase and its new top-level Log lines (a hard one to its tag: the
+# reasons are compared from stdout), `large` and `; gates: soft` cut; with
+# plan3, the plan3_rows reasons cut too
+verdict_of() {
+  local cut='^- (US[0-9]+: )?large$'
+  if [ "${2-}" = plan3 ]; then
+    cut="$cut|^- (assumption [0-9]+ needs you|constitution: .*|blocker|checklist item|fact missing: unchecked checklist items)$"
+  fi
+  VD="$(
+    sed -n 1p "$work/keep-$1.out"
+    sed -n '2,${/^- /!q;p;}' "$work/keep-$1.out" | grep -Ev "$cut" || true
+    sed -n '/^--$/q;/^- Current phase: /p' "$work/keep-$1.log"
+    sed -n '/^--$/,$p' "$work/keep-$1.log" | grep -E '^- \[x\] [0-9]' | sed -E 's/; gates: soft//; s/ (\[hard\]) — .*/ \1/'
+  )"
+}
+
+# same_verdict <a> <b> [plan3]: the same verdict, reasons and gate lines once
+# the cuts are made (plan3: on b's side)
+same_verdict() {
+  local a
+  verdict_of "$1"
+  a="$VD"
+  verdict_of "$2" "${3-}"
+  [ "$a" = "$VD" ] || { out="$a
+-- vs --
+$VD"; fail "$1 / $2: verdicts differ"; }
+}
+
+# zero_reports [<finding>]: a no-finding report at each report path of CALL
+# not written yet; design: a rec: user design finding in the 4c report;
+# sec: a security finding in the 7b report
+zero_reports() {
+  local w k l lenses
+  for w in "${CALL[@]}"; do
+    case $w in "$rd"/*.md) ;; *) continue ;; esac
+    [ ! -e "$w" ] || continue
+    k=${w##*/}
+    k=${k%.md}
+    case $k in
+      4-4*)
+        put_at design-reviewer/4a+4b+4c-zero "$w"
+        if [ "${1-}" = design ] && [[ $k == *4c* ]]; then
+          sed -i 's/^Findings: none$/Findings:\n- [design] "page" is never defined — at: spec.md: FR-001 — fix: define it — kind: clarity — severity: high — rec: perhaps/' "$w"
+        fi
+        continue ;;
+    esac
+    IFS=+ read -r -a lenses <<<"${k#*-}"
+    for l in "${lenses[@]}"; do
+      case $l in
+        7a) printf 'Bugs (7a): none\nSpec (7a): none\nStandards (7a): none\nAcceptance criteria (7a): none\n' ;;
+        7b)
+          if [ "${1-}" = sec ]; then
+            printf 'Security (7b):\n- a token reaches the log — at: src/auth.sh:12 — fix: drop the log line — severity: high — rec: apply\n'
+          else
+            printf 'Security (7b): none\n'
+          fi
+          printf 'Accepted design findings built (7b): none\n' ;;
+        7c) printf 'Performance (7c): none\n' ;;
+        7d) printf 'Cuts (7d): none\nnet: lean already\n' ;;
+        7e) printf 'Readability (7e): none\n' ;;
+      esac
+    done >"$w"
+    printf 'Dismissed: none\nWrote:\n- %s\n' "$w" >>"$w"
+  done
+}
+
+# many_tasks <n> [HIGH]: tasks.md with n tasks (T001 setup, the others US1)
+# and the tasker's report on it as reports/5-tasks.md; R = its path
+many_tasks() {
+  local i t
+  # shellcheck disable=SC2016 # the backticks are tasks.md's, not a command
+  {
+    printf '# Tasks: test feature\n\n## Phase 1: Setup\n\n- [ ] T001 Create `src/a.sh`\n\n## Phase 2: User Story 1 - Run a step\n\n'
+    for ((i = 2; i <= $1; i++)); do printf -- '- [ ] T%03d [US1] Write `src/a.sh`\n' "$i"; done
+  } >"$top/specs/x/tasks.md"
+  t=$(printf 'T%03d' "$1")
+  R="$rd/5-tasks.md"
+  printf '%s\n' "Tasks: $top/specs/x/tasks.md" "Total tasks: $1" 'Per story:' '- setup/foundational: T001' "- US1: T002–$t" \
+    'MVP slice: T001–T002' 'Analyze: ran' 'Fixed: none' >"$R"
+  if [ "${2-}" = HIGH ]; then
+    printf '%s\n' 'Open findings:' '- HIGH — US1 has no test → add one (tasks.md)' >>"$R"
+  else
+    printf '%s\n' 'Open findings: none' >>"$R"
+  fi
+  printf '%s\n' 'Unchecked checklist items: none' 'Skipped hooks: none' 'Wrote:' "- $top/specs/x/tasks.md" "- $R" >>"$R"
+}
+
+P2_CHK='    - Unchecked checklist items: requirements.md: CHK003 (recommended: yes)'
+P3_ASSUME='- [x] 3 Plan — merged with 4; assumptions needing you: 2; constitution: pass; blockers: none; size trigger: none'
+P3_STOPPED='- [x] 3 Plan [hard] — large; assumption 2 needs you; assumptions needing you: 2; constitution: pass; blockers: none; size trigger: none'
+
+# gate_at <name> <gate> <size> <Gates value or -> [<variant>]: a case at that
+# gate (f2-f7 /feat, x1-x4 /fix) on that size, the field written unless -,
+# run through its boundary, kept as <name>. Variants: f3 assume (assumptions
+# and an open checklist item); f4 assume, stopped (gate 3 stopped, answered),
+# +user (a rec: user finding); f5 <n tasks>[+HIGH]; f6 last, design, fail, fail2;
+# f7 sec; x1 conf (Confidence medium); x4 sec (risk area security)
+gate_at() {
+  local name=$1 g=$2 z=$3 v=$4 var=${5-} sk=feat
+  case $g in x*) sk=fix ;; esac
+  new_case "gates: $name" "$sk"
+  if [ "$v" != - ]; then gates_field "$v"; fi
+  if [ -n "${PRE-}" ]; then "$PRE"; fi
+  case $g in
+    f2)
+      put specifier/soft 2-specify
+      run feat "$sf" 2 "$R" ;;
+    f3)
+      S set Size "$z"
+      S set 'Current phase' '3 Plan'
+      if [ "$var" = assume ]; then
+        S log "$P2_SOFT" "$P2_CHK"
+        put planner/assume 3-plan
+      else
+        S log "$P2_SOFT" "$P2_NONE"
+        put planner/plain 3-plan
+      fi
+      run feat "$sf" 3 "$R" ;;
+    f4)
+      S set Size "$z"
+      S set 'Current phase' '4 Design review'
+      case $var in
+        assume*) S log "$P2_SOFT" "$P2_NONE" "$P3_ASSUME" ;;
+        stopped*) S log "$P2_SOFT" "$P2_NONE" "$P3_STOPPED" '    - answer: approved (user: "ok")' ;;
+        *) S log "$P2_SOFT" "$P2_NONE" "$P3_FACTS" ;;
+      esac
+      run resume "$sf"
+      call_line boundary
+      if [[ $var == *+user ]]; then zero_reports design; else zero_reports; fi
+      run feat "$sf" "${CALL[@]}" ;;
+    f5)
+      S set Size "$z"
+      S set 'Current phase' '5 Tasks'
+      S log "$P2_SOFT" "$P2_NONE" "$P3_FACTS"
+      if [ -n "$var" ]; then many_tasks "${var%+*}" "${var#*+}"; else put tasker/match 5-tasks; fi
+      run feat "$sf" 5 "$R" ;;
+    f6)
+      S set Size "$z"
+      S set 'Current phase' '6 Implement'
+      S log '- [x] 5 Tasks [soft] — 6 tasks; story.sh: match; analyze ran'
+      case $var in
+        last)
+          put implementer/story-pass 6-US1
+          run feat "$sf" 6 "$R"
+          put implementer/story-clean 6-US2
+          run feat "$sf" 6 "$R" ;;
+        design)
+          put implementer/story-design 6-US1
+          run feat "$sf" 6 "$R" ;;
+        fail2)
+          put implementer/story-fail 6-US1
+          run feat "$sf" 6 "$R"
+          put implementer/story-fail 6-US1-2
+          run feat "$sf" 6 "$R" ;;
+        fail)
+          put implementer/story-fail 6-US1
+          run feat "$sf" 6 "$R" ;;
+        *)
+          put implementer/story-pass 6-US1
+          run feat "$sf" 6 "$R" ;;
+      esac ;;
+    f7)
+      S set Size "$z"
+      S set 'Current phase' '7 Code review'
+      run resume "$sf"
+      call_line boundary
+      zero_reports "$var"
+      run feat "$sf" "${CALL[@]}"
+      if printf '%s\n' "$raw" | grep -q "^boundary:	7e	"; then
+        call_line boundary
+        zero_reports
+        run feat "$sf" "${CALL[@]}"
+      fi ;;
+    x1)
+      put bug-assessor/assess-soft 1-assess
+      sed -i "s/^Proposed size: small/Proposed size: $z/" "$R"
+      if [ "$var" = conf ]; then sed -i 's/^Confidence: high$/Confidence: medium/' "$R"; fi
+      run fix "$sf" 1 "$R" 'approved: bash tests/page.sh' 'question: which page? → the last' ;;
+    x2)
+      S set Size "$z"
+      S set 'Current phase' '2 Fix'
+      S log "$A1_PASS"
+      put implementer/bug-pass 2-fix
+      run fix "$sf" 2 "$R" ;;
+    x3)
+      S set Size "$z"
+      S set 'Current phase' '3 Test'
+      S log "$A1_PASS" '- [x] 2 implementer — not verified: none' '- [x] 2 Fix [soft] — applied; no deviations; checks pass'
+      put bug-assessor/test-verified 3-test
+      run fix "$sf" 3 "$R" ;;
+    x4)
+      S set Size "$z"
+      S set 'Current phase' '4 Code review'
+      if [ "$var" = sec ]; then S log "${A1_PASS/risk area none/risk area security}"; else S log "$A1_PASS"; fi
+      run resume "$sf"
+      call_line boundary
+      zero_reports
+      run fix "$sf" "${CALL[@]}" ;;
+  esac
+  [ "$rc" = 0 ] || fail "$name: exit $rc"
+  keep "$name"
+}
+
+# case 1 (SC-001): Gates: none is no field, at every gate (the goldens above
+# are unchanged: they hold no field)
+for g in f2:medium f3:large f4:medium f5:large:61 f6:large f7:large x1:medium x2:medium x3:medium x4:large; do
+  IFS=: read -r gg zz vv <<<"$g"
+  gate_at "c1-$gg-none" "$gg" "$zz" none "$vv"
+  gate_at "c1-$gg-nofield" "$gg" "$zz" - "$vv"
+  current="case 1: $gg"
+  same_run "c1-$gg-none" "c1-$gg-nofield"
+done
+
+# case 2 (FR-009, FR-023, SC-009): a cell for a phase without a size reason,
+# or for another size, changes nothing
+c2() {
+  gate_at "c2-$1-a" "$2" "$3" "$4" "${5-}"
+  gate_at "c2-$1-b" "$2" "$3" - "${5-}"
+  current="case 2: $1"
+  same_run "c2-$1-a" "c2-$1-b"
+}
+c2 feat2-soft f2 medium feat.2=soft
+c2 fix2-soft x2 medium fix.2=soft
+c2 fix3-soft x3 medium fix.3=soft
+c2 feat4-large-on-medium f4 medium feat.4.large=soft
+c2 feat4-small-on-medium f4 medium feat.4.small=hard
+c2 fix1-small-on-medium x1 medium fix.1.small=hard
+c2 feat6-small-on-large f6 large feat.6.small=soft
+
+# case 3 (SC-003, SC-004): soft on large gives medium's verdict, clean and
+# with a reason that is always hard
+c3() {
+  gate_at "c3-$1-large" "$2" large "$3" "${4-}"
+  gate_at "c3-$1-medium" "$2" medium - "${5-${4-}}"
+  current="case 3: $1"
+  same_verdict "c3-$1-large" "c3-$1-medium" "${6-}"
+}
+c3 feat3 f3 feat.3.large=soft
+c3 feat3-assume f3 feat.3.large=soft assume
+c3 feat4 f4 'feat.3.large=soft feat.4.large=soft'
+c3 feat4-user f4 'feat.3.large=soft feat.4.large=soft' +user
+c3 feat4-assume f4 'feat.3.large=soft feat.4.large=soft' assume
+c3 feat4-stopped f4 feat.4.large=soft stopped+user assume+user plan3
+c3 feat7 f7 feat.7.large=soft
+c3 feat7-sec f7 feat.7.large=soft sec
+c3 fix4 x4 fix.4.large=soft
+c3 fix4-sec x4 fix.4.large=soft sec
+# gate 5: a large Size stays large only past 60 tasks, where medium would
+# grow: the large run is checked against the rows themselves
+current="case 3: feat5"
+gate_at c3-feat5-large f5 large feat.5.large=soft 61
+[ "$(sed -n 1p "$work/keep-c3-feat5-large.out")" = soft ] || fail "feat 5 large soft: not soft"
+grep -qxF -- '- [x] 5 Tasks [soft] — 61 tasks; story.sh: match; analyze ran; gates: soft' "$work/keep-c3-feat5-large.log" || fail "feat 5: no soft line with the mark"
+gate_at c3-feat5-high f5 large feat.5.large=soft 61+HIGH
+[ "$(sed -n '1,2p' "$work/keep-c3-feat5-high.out")" = 'hard:
+- 1 CRITICAL/HIGH findings' ] || fail "feat 5 large soft with a HIGH finding: want that one reason"
+gate_at c3-feat5-auto f5 large - 61
+[ "$(sed -n '1,2p' "$work/keep-c3-feat5-auto.out")" = 'hard:
+- large' ] || fail "feat 5 large auto: want large"
+
+# case 7 (FR-005): gate 3 softened on large merges with 4; gate 4 (auto)
+# then holds large and the plan3_rows reasons
+new_case "case 7: feat.3.large=soft on large, merged, then gate 4" feat
+gates_field feat.3.large=soft
+S set Size large
+S set 'Current phase' '3 Plan'
+S log "$P2_SOFT" "$P2_CHK"
+put planner/assume 3-plan
+run feat "$sf" 3 "$R"
+check gates-feat3-soft-large 0
+call_line boundary
+zero_reports
+run feat "$sf" "${CALL[@]}"
+check gates-feat4-after-soft-3 0
+
+# case 9 (soft part): soft on large at gate 6 logs no gate line for an
+# earlier story, the mark on the last one's, and its other reasons still stop
+new_case "case 9: feat.6.large=soft on large, two stories" feat
+gates_field feat.6.large=soft
+S set Size large
+S set 'Current phase' '6 Implement'
+S log '- [x] 5 Tasks [soft] — 6 tasks; story.sh: match; analyze ran'
+put implementer/story-pass 6-US1
+run feat "$sf" 6 "$R"
+[ "$rc" = 0 ] || fail "exit $rc"
+[ "$(sed -n 1p <<<"$out")" = soft ] || fail "US1: not soft"
+grep -q '^- \[x\] 6 Implement' "$sf" && fail "US1 logged a gate line"
+put implementer/story-clean 6-US2
+run feat "$sf" 6 "$R"
+check gates-feat6-soft-large-last 0
+for v in design fail2; do
+  gate_at "c9-$v-large" f6 large feat.6.large=soft "$v"
+  gate_at "c9-$v-medium" f6 medium - "$v"
+  current="case 9: $v"
+  same_verdict "c9-$v-large" "c9-$v-medium"
+done
+
+# case 11 (soft part): /fix 1's cell is the proposed size's
+gate_at c11-soft x1 medium fix.1.medium=soft
+check gates-fix1-soft-medium 0
+gate_at c11-conf x1 medium fix.1.medium=soft conf
+current="case 11: fix.1.medium=soft, confidence medium"
+[ "$(sed -n '1,2p' "$work/keep-c11-conf.out")" = 'hard:
+- confidence medium' ] || fail "want hard on the one reason confidence medium"
+if grep -q -- '^- proposed size' "$work/keep-c11-conf.out"; then fail "a proposed size reason"; fi
+
+# case 15 (FR-011): a Gates: value that is not canonical is an error
+for v in 'feat.3=bad' 'fix.1=soft' 'feat.4=hard feat.3=hard' 'feat.3=hard feat.3.large=soft' 'feat.8=soft' 'feat.3=auto' 'feat.3=hard  feat.4=soft'; do
+  new_case "case 15: Gates: $v" feat
+  gates_field "$v"
+  run resume "$sf"
+  one_line 1 "step: error: Gates: $v is not a canonical feat gates value"
+done
+
+# case 16: the repo's .logistics.yml does not change a recorded decision
+gates_yml() { printf 'gates:\n  feat:\n    3: hard\n' >"$top/.logistics.yml"; }
+PRE=gates_yml gate_at c16-file f3 small none
+gate_at c16-nofile f3 small none
+current="case 16: .logistics.yml says feat 3 hard, the field none"
+same_run c16-file c16-nofile
+
+# case 17: /fix 1's `issue to create` follows the tracker: key, not the file:
+# a gates-only .logistics.yml gives no such reason, one with tracker: does
+# c17 <name> <want: yes|no> <line>...: /fix 1 with Issue: none and a
+# .logistics.yml of those lines
+c17() {
+  local want=$2
+  new_case "case 17: $1" fix
+  shift 2
+  S set Issue none
+  printf '%s\n' "$@" >"$top/.logistics.yml"
+  put bug-assessor/assess-soft 1-assess
+  run fix "$sf" 1 "$R"
+  [ "$rc" = 0 ] || fail "exit $rc"
+  if printf '%s\n' "$out" | grep -qxF -- '- issue to create'; then
+    [ "$want" = yes ] || fail "an issue to create reason without a tracker: key"
+  else
+    [ "$want" = no ] || fail "no issue to create reason"
+  fi
+}
+c17 'gates only' no 'gates:' '  fix:' '    4: hard' '# tracker: not here'
+c17 'tracker and gates' yes 'gates:' '  fix:' '    4: hard' $'tracker:  # on\r' '  provider: github'
+
+# --- hard (US2): gates: hard at any settable gate for the run's size -----------
+
+# case 4: feat.2=hard on small stops after the spec; approved → phase 3
+size_small() { S set Size small; }
+PRE=size_small gate_at c4 f2 small feat.2=hard
+check gates-feat2-hard 0
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+check gates-feat2-hard-approved 0
+
+# case 5: feat.3=hard on small: the large gate 3 form with gates: hard; its
+# answers, resume and phase2-mode as at any gate 3
+g3_hard() {
+  new_case "$1" feat
+  gates_field feat.3=hard
+  S set Size "$2"
+  S set 'Current phase' '3 Plan'
+  S log "$P2_SOFT" "$P2_NONE"
+  put "planner/$3" 3-plan
+  run feat "$sf" 3 "$R"
+}
+g3_hard "case 5: feat.3=hard small, approved" small plain
+check gates-feat3-hard-small 0
+call_line 'answer call'
+run resume "$sf"
+grep -qxF 'phase2-mode: soft 3 open' <<<"$out" || fail "resume at the open gate 3: no phase2-mode: soft 3 open"
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+check gates-feat3-hard-approved 0
+
+g3_hard "case 5: feat.3=hard small, changed, the amend, then gate 4's note" small plain
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: changed (user: "drop the daemon")'
+check gates-feat3-hard-changed 0
+put planner/plain 3-plan-2
+run feat "$sf" 3 "$R"
+check gates-feat3-hard-amended 0
+call_line boundary
+zero_reports
+run feat "$sf" "${CALL[@]}"
+check gates-feat4-after-hard-3-amended 0
+
+# gate 4 after a gate 3 stopped for gates: hard skips the plan3_rows it
+# evaluated (medium: the size increase row stays out of the way)
+g3_hard "case 5: feat.3=hard medium, assumptions, then gate 4" medium assume
+[ "$(sed -n 1p <<<"$out")" = hard: ] || fail "gate 3 not hard"
+[ "$(sed -n 2p <<<"$out")" = '- gates: hard' ] || fail "gate 3: gates: hard is not the first reason"
+printf '%s\n' "$out" | grep -qxF -- '- assumption 2 needs you' || fail "gate 3: no assumption reason"
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+call_line boundary
+zero_reports
+run feat "$sf" "${CALL[@]}"
+[ "$rc" = 0 ] || fail "gate 4: exit $rc"
+[ "$(sed -n 1p <<<"$out")" = soft ] || fail "gate 4 after a stopped gate 3: not soft"
+
+# a size-specific cell stopped gate 3, then a size increase answered at gate
+# 4: the 3 Plan record keeps phase 2's summary on gate 3, logged once
+new_case "case 5: feat.3.small=hard small, then size medium at gate 4" feat
+gates_field 'feat.3.small=hard feat.4=hard'
+S set Size small
+S set 'Current phase' '3 Plan'
+S log "$P2_SOFT" "$P2_NONE"
+put planner/plain 3-plan
+run feat "$sf" 3 "$R"
+[ "$(sed -n 1p <<<"$out")" = hard: ] || fail "gate 3 not hard"
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+call_line boundary
+zero_reports
+run feat "$sf" "${CALL[@]}"
+[ "$(sed -n 1p <<<"$out")" = hard: ] || fail "gate 4 not hard"
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: size medium (user: "it is medium")'
+[ "$rc" = 0 ] || fail "gate 4 answer: exit $rc"
+grep -qx -- '- Size: medium' "$sf" || fail "Size not medium"
+[ "$(grep -c -- '- spec assumptions: kept as recommended' "$sf")" = 1 ] || fail "spec assumptions logged more than once"
+run resume "$sf"
+grep -qxF 'phase2-mode: soft 3 closed' <<<"$out" || fail "resume after gate 4: no phase2-mode: soft 3 closed"
+
+# case 6: feat.3.large=hard on large: large; gates: hard
+new_case "case 6: feat.3.large=hard large" feat
+gates_field feat.3.large=hard
+S set Size large
+S set 'Current phase' '3 Plan'
+S log "$P2_SOFT" "$P2_NONE"
+put planner/plain 3-plan
+run feat "$sf" 3 "$R"
+check gates-feat3-hard-large 0
+
+# case 8: feat.4=hard and feat.5=hard on small stop with their rows
+gate_at c8-f4 f4 small feat.4=hard
+check gates-feat4-hard-small 0
+gate_at c8-f5 f5 small feat.5=hard
+check gates-feat5-hard-small 0
+
+# case 9 (hard part): feat.6=hard on small stops after each story; the
+# retry row stays soft
+new_case "case 9: feat.6=hard small, two stories" feat
+gates_field feat.6=hard
+S set Size small
+S set 'Current phase' '6 Implement'
+S log '- [x] 5 Tasks [soft] — 6 tasks; story.sh: match; analyze ran'
+put implementer/story-pass 6-US1
+run feat "$sf" 6 "$R"
+check gates-feat6-hard-us1 0
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "go on")'
+check gates-feat6-hard-us1-approved 0
+put implementer/story-clean 6-US2
+run feat "$sf" 6 "$R"
+check gates-feat6-hard-us2 0
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "go on")'
+check gates-feat6-hard-us2-approved 0
+gate_at c9-retry f6 small feat.6=hard fail
+current="case 9: feat.6=hard, a failing check, retry unused"
+[ "$(sed -n 1p "$work/keep-c9-retry.out")" = soft ] || fail "the retry row is not soft"
+grep -q '^- \[x\] 6 US1 \[soft\] — checks failed (retry 1 of 1): ' "$work/keep-c9-retry.log" || fail "no retry line"
+
+# case 10: feat.7=hard on medium: no stop at token 7, gates: hard after 7e
+gate_at c10 f7 medium feat.7=hard
+check gates-feat7-hard-medium 0
+[ "$(grep -c '^- \[x\] 7 Code review \[hard\]' "$sf")" = 1 ] || fail "want one 7 Code review gate"
+grep -q '^- \[x\] 7 Code review \[hard\] — gates: hard$' "$sf" || fail "the 7 Code review gate is not gates: hard"
+
+# case 11 (hard part): fix.1=hard on a small bug
+gate_at c11-hard x1 small fix.1=hard
+check gates-fix1-hard-small 0
+
+# case 12: fix.2=hard; approved → phase 3
+gate_at c12 x2 small fix.2=hard
+check gates-fix2-hard 0
+call_line 'answer call'
+run fix "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+check gates-fix2-hard-approved 0
+
+# case 13: fix.3=hard stops once per test report
+fix3_hard() {
+  fix_at "$1" '3 Test'
+  gates_field fix.3=hard
+  S log '- [x] 2 implementer — not verified:' '    - n/a → live run → no credentials' '- [x] 2 Fix [soft] — applied; no deviations; checks pass'
+  put "bug-assessor/$2" 3-test
+  run fix "$sf" 3 "$R"
+}
+fix3_hard "case 13: fix.3=hard, verified" test-verified
+check gates-fix3-hard-verified 0
+call_line 'answer call'
+run fix "$sf" "${CALL[@]}" 'answer: approved (user: "ok")'
+check gates-fix3-hard-verified-approved 0
+fix3_hard "case 13: fix.3=hard, first failed" test-failed
+check gates-fix3-hard-failed 0
+call_line 'answer call'
+run fix "$sf" "${CALL[@]}" 'answer: approved (user: "retry")'
+check gates-fix3-hard-failed-approved 0
+fix3_hard "case 13: fix.3=hard, unaccounted items" test-unaccounted
+check gates-fix3-hard-unaccounted 0
+call_line 'answer call'
+run fix "$sf" "${CALL[@]}" 'answer: approved (user: "checked it by hand")'
+check gates-fix3-hard-unaccounted-approved 0
+fix3_hard "case 13: fix.3=hard, partial" test-partial
+check gates-fix3-hard-partial 0
+call_line 'answer call'
+run fix "$sf" "${CALL[@]}" 'answer: approved (user: "fine")'
+[ "$(sed -n 1p <<<"$out")" = 'refused: approved is not valid at 3 Test: answer ship with partial, changed or back to' ] || fail "partial with gates: hard: approved not refused as today"
+
+# case 14: fix.4=hard on small
+gate_at c14 x4 small fix.4=hard
+check gates-fix4-hard-small 0
+
+# US2 scenario 8, FR-023: a cell hard for small only changes no other size
+c2 feat2-small-hard-on-medium f2 medium feat.2.small=hard
+c2 feat3-small-hard-on-large f3 large feat.3.small=hard
+# (40 tasks keep Size medium: fewer would set it small first, as today)
+c2 feat5-small-hard-on-medium f5 medium feat.5.small=hard 40
+c2 feat6-small-hard-on-large f6 large feat.6.small=hard
+c2 feat7-small-hard-on-medium f7 medium feat.7.small=hard
+c2 fix2-small-hard-on-medium x2 medium fix.2.small=hard
+c2 fix3-small-hard-on-medium x3 medium fix.3.small=hard
+c2 fix4-small-hard-on-large x4 large fix.4.small=hard
+
+# --- fixed for the run (US3, SC-006): a resume reads the recorded field only ------
+
+# c18_hard <name> <edited|plain>: feat.3=hard on small stops at gate 3; the
+# repo's .logistics.yml then says soft (edited) or is absent (plain); resume
+c18_hard() {
+  g3_hard "case 18: $1" small plain
+  [ "$rc" = 0 ] || fail "gate 3: exit $rc"
+  if [ "$2" = edited ]; then printf 'gates:\n  feat:\n    3: soft\n    4: soft\n' >"$top/.logistics.yml"; fi
+  run resume "$sf"
+  [ "$rc" = 0 ] || fail "resume: exit $rc"
+  keep "$1"
+}
+c18_hard c18-hard-edited edited
+c18_hard c18-hard-plain plain
+current="case 18: Gates: feat.3=hard, the file edited after init, resume"
+same_run c18-hard-edited c18-hard-plain
+grep -qxF 'phase2-mode: soft 3 open' "$work/keep-c18-hard-edited.out" || fail "the edited file closed the open gate 3"
+
+# c18_auto <name> <Gates value or -> [edited]: a small run past gate 3
+# (merged), then resume at phase 4, the file written in between when edited
+c18_auto() {
+  gate_at "$1" f3 small "$2"
+  if [ "${3-}" = edited ]; then printf 'gates:\n  feat:\n    4: hard\n    5: hard\n' >"$top/.logistics.yml"; fi
+  run resume "$sf"
+  [ "$rc" = 0 ] || fail "resume: exit $rc"
+  keep "$1"
+}
+c18_auto c18-auto-none none
+c18_auto c18-auto-nofield -
+c18_auto c18-auto-edited none edited
+current="case 18: no Gates: field resumes as Gates: none"
+grep -q '^boundary:	4	' "$work/keep-c18-auto-none.out" || fail "the resume does not print phase 4's boundary"
+same_run c18-auto-nofield c18-auto-none
+current="case 18: Gates: none, the file edited after init, resume"
+same_run c18-auto-edited c18-auto-none
+
 if [ "$update" = 1 ] && [ "$updated" = 1 ]; then
   echo "step: expected/ rewritten; review it with git diff tests/step/expected"
+
   exit 1
 fi
 echo "step: all cases pass"

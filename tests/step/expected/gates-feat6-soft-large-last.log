@@ -1,0 +1,7 @@
+- Size: large
+- Agents: none (every spawn is fresh)
+- Current phase: 7 Code review
+# /feat state: Test feature
+--
+- [x] 6 US2 — not verified: none
+- [x] 6 Implement [soft] — tasks done: 6 (1 not verified); checks pass; gates: soft

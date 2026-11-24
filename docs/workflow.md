@@ -52,18 +52,20 @@ holds a size table or a gate table: `step.sh` applies them.
 | 1 | Brief         | `/brief` (your session), then `feat-brief-reviewer`                                   | `interview-me`                                                     | `specs/briefs/<name>.md`, or a capability map | **hard** (confirm the brief and the review's findings)                                                                     |
 | 0 | Setup         | coordinator                                                                           | —                                                                  | conventions, hooks checked                    | hard only if a Spec Kit hook won't run (specify, plan, tasks, analyze) or would branch or commit |
 | 2 | Specify       | `feat-specifier`                                                                      | `speckit-specify`                                                  | branch/worktree, `spec.md`, `feat-state.md`   | **hard** only on an open question or a blocker; else soft, and its summary opens the next gate                              |
-| 3 | Plan          | `feat-planner`                                                                        | `speckit-plan`                                                     | `plan.md` and design docs                     | none (hard for large, opening with the spec summary after a soft phase 2)                                                  |
-| 4 | Design review | `feat-design-reviewer` ×1 (small) or ×3, then `feat-planner` writes accepted findings | `security-and-hardening` (cost and design checklists in the agent) | a paraphrase, findings D1… with recommendations | one gate with 3: hard only on a finding that needs you (`user`), a user-call assumption, a constitution violation, a blocker, a size increase, a paraphrase that contradicts the brief or an unchecked checklist item after a soft phase 2, else soft and the `apply` findings are applied (always hard for large) |
-| 5 | Tasks         | `feat-tasker`                                                                         | `speckit-tasks`, `speckit-analyze`                                 | `tasks.md`, analysis clean                    | hard on CRITICAL/HIGH, analyze not run, a size increase, an unanswered checklist item or tasks.md not matching the tasker's report (`story.sh`); always for large               |
-| 6 | Implement     | `feat-implementer` ×1 per user story, in turn                                         | `speckit-implement`                                                | the code, tasks ticked when their checks ran, a Not verified list | soft (hard per story for large; hard on a design problem)                                                                  |
-| 7 | Code review   | `feat-code-reviewer` ×2 (small) or ×5, then `feat-implementer` applies the fixes         | `security-and-hardening`, `performance-optimization`               | findings B, S, P, C, R with recommendations; fixes applied | small/medium: **hard** on a finding that needs you (`user`), an `S` finding or an unmet criterion, else soft; large: **hard** |
+| 3 | Plan          | `feat-planner`                                                                        | `speckit-plan`                                                     | `plan.md` and design docs                     | none by default (hard for large, opening with the spec summary after a soft phase 2)                                       |
+| 4 | Design review | `feat-design-reviewer` ×1 (small) or ×3, then `feat-planner` writes accepted findings | `security-and-hardening` (cost and design checklists in the agent) | a paraphrase, findings D1… with recommendations | one gate with 3: hard only on a finding that needs you (`user`), a user-call assumption, a constitution violation, a blocker, a size increase, a paraphrase that contradicts the brief or an unchecked checklist item after a soft phase 2, else soft and the `apply` findings are applied (hard for large by default) |
+| 5 | Tasks         | `feat-tasker`                                                                         | `speckit-tasks`, `speckit-analyze`                                 | `tasks.md`, analysis clean                    | hard on CRITICAL/HIGH, analyze not run, a size increase, an unanswered checklist item or tasks.md not matching the tasker's report (`story.sh`); for large by default         |
+| 6 | Implement     | `feat-implementer` ×1 per user story, in turn                                         | `speckit-implement`                                                | the code, tasks ticked when their checks ran, a Not verified list | soft (hard per story for large by default; hard on a design problem)                                                       |
+| 7 | Code review   | `feat-code-reviewer` ×2 (small) or ×5, then `feat-implementer` applies the fixes         | `security-and-hardening`, `performance-optimization`               | findings B, S, P, C, R with recommendations; fixes applied | small/medium: **hard** on a finding that needs you (`user`), an `S` finding or an unmet criterion, else soft; large: **hard** by default |
 | 8 | Ship          | `feat-shipper`                                                                        | —                                                                  | docs updated, commits, push, PR               | none                                                                                                                       |
 
 **Hard gate**: Claude stops and waits for your answer. **Soft gate**: Claude
 reports and continues, its one-line summary in the same turn as the next
 spawn; anything surprising lets the coordinator turn it into a hard gate
 (an override, logged). `step.sh` decides each gate of the table from the
-agents' reports and the Log; the gates are the ones the column says.
+agents' reports and the Log; the gates are the ones the column says,
+unless `.logistics.yml` sets them ([Configuring the
+gates](#configuring-the-gates)).
 Every agent's report ends with a `Wrote:` list (its artifacts and the
 files it wrote, or `none`). `step.sh` refuses any path that is not
 absolute, is outside the worktree, or holds a quote, newline, tab, `$`,
@@ -96,8 +98,8 @@ that lists the paths that changed. The state file is left out: the
 coordinator logs to it while the reviewers run. An agent given no report path
 (`/tiny`'s reviewer, `/brief`'s) reports in full and writes nothing.
 
-After a soft phase 2, the next gate (3/4, or 3 on large) opens with the spec
-summary.
+After a soft phase 2, the next gate (3/4, or 3 when gate 3 stops: on large
+by default) opens with the spec summary.
 
 From phase 3 on, `step.sh` starts each phase with the base check (see
 [When main moves](#when-main-moves)): silent when main has not moved; a
@@ -179,7 +181,7 @@ gets its own brief and size column.
 |                      | small                                                                                        | medium                                           | large                                                       | huge                                       |
 | -------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------ |
 | **When**             | up to ~30 tasks; no new service, permissions, network exposure or dependency; docs-only work | ~31–60 tasks, or a small one adding any of those | more than ~60 tasks                                         | capabilities that could ship independently |
-| **Hard gates**       | brief, 7 (+2 on a question, +3/4 on a finding or checklist item, +5 on CRITICAL/HIGH or a task mismatch, +7 on a finding that needs you) | brief, 7 (+2, +3/4, +5 and +7 as for small)    | brief, 3, 4, 5, each story in 6, 7 (+2 on a question)       | the map                                    |
+| **Hard gates**       | brief, 7 (+2 on a question, +3/4 on a finding or checklist item, +5 on CRITICAL/HIGH or a task mismatch, +7 on a finding that needs you) | brief, 7 (+2, +3/4, +5 and +7 as for small)    | brief, 3, 4, 5, each story in 6, 7 (+2 on a question); by default, see [Configuring the gates](#configuring-the-gates) | the map                                    |
 | **Design reviewers** | 1                                                                                            | 3                                                | 3                                                           | per capability                             |
 | **Code reviewers**   | 2                                                                                            | 5                                                | 5                                                           | per capability                             |
 | **PRs**              | 1                                                                                            | 1                                                | 1                                                           | 1 per capability                           |
@@ -205,6 +207,81 @@ gets its own brief and size column.
   little reasoning; it used to run at the coordinator's full context.
 - **Huge is a scoping problem.** One spec with a dozen capabilities gives a
   shallow review and a PR nobody can read.
+
+## Configuring the gates
+
+The size picks the gates by default; a repository can change that with a
+`gates:` section in `.logistics.yml` at its root, beside a `tracker:`
+section or without one (the file with only `gates:` turns no board
+tracking on). Each phase takes one line under `feat:` or `fix:`, in one of
+two forms:
+
+```yaml
+gates:
+  feat:
+    3: hard                          # every size: always stop after the plan
+    6: { large: soft }               # large only: no stop between stories
+    4: { small: hard, large: soft }  # two sizes; medium stays auto
+  fix:
+    1: "soft"
+```
+
+- **A plain value** sets the gate for every size; **a one-line mapping**
+  `{ <size>: <value>, … }` sets the sizes it names (`small`, `medium`,
+  `large`), and a size it doesn't name stays `auto`. A block mapping of
+  sizes is not accepted.
+- **The values**: `auto` (the default: the gate as the size makes it),
+  `soft` (the size no longer makes it stop; every other reason still does)
+  and `hard` (it stops even when nothing else would, with the reason
+  `gates: hard`).
+- Settable: `/feat` 2–7 and `/fix` 1–4. Ship never is, and no setting
+  removes a safety reason (the last column below). Comments and quoted
+  values are fine; anything else is refused at setup with its line
+  (`tracker: error: .logistics.yml line <n>: <why>`), before anything
+  runs.
+
+Each settable gate takes one value for every size or a value per size;
+each cell below applies only to runs of that size.
+
+| Gate | Default small · medium · large | `soft` changes | `hard` changes | Always hard |
+|---|---|---|---|---|
+| `feat.2` Specify | soft · soft · soft | nothing (no size reason) | stops after the spec | open markers, blocker, size remark, no spec |
+| `feat.3` Plan | none (merged with 4) · none · **hard** `large` | large: no gate 3, merged with 4 like small; its reasons are checked at gate 4. Small, medium: nothing | small, medium: the large gate 3, reason `gates: hard`; large: reasons `large; gates: hard`. Gate 4 then skips what gate 3 approved | when gate 3 stops: assumption needs you, constitution, blocker, checklist item (with no gate 3, these are checked at gate 4) |
+| `feat.4` Design review | soft* · soft* · **hard** `large` | large: soft*. Small, medium: nothing | stops | `rec: user`, assumption needs you, constitution, blocker, size increase, paraphrase contradicts, checklist item, fact missing |
+| `feat.5` Tasks | soft* · soft* · **hard** `large` | large: soft*. Small, medium: nothing | stops | CRITICAL/HIGH, analyze not run, `story.sh` mismatch, unanswered checklist, size increase, fact missing |
+| `feat.6` Implement (per story) | soft* · soft* · **hard** `large` after each story | large: no stop between stories. Small, medium: nothing | stops after each story | Not verified line missing, checks fail after retry, design problem |
+| `feat.7` Code review | soft* · soft* · **hard** `large` | large: soft* (applies `apply` recommendations). Small, medium: nothing | stops (after 7e on medium and large) | `rec: user`, `S` finding, criterion not met, empty diff |
+| `feat.8` Ship | not settable | — | — | ship blocked |
+| `fix.1` Assess (by proposed size) | soft* · **hard** `proposed size` · **hard** `proposed size` | medium, large: soft*. Small: nothing | stops | every other row: untrusted author, needs approval, security risk area, issue to create, needs reproduction, open questions, several bugs, confidence, reproduction, remediations, public behaviour change, sections, slug |
+| `fix.2` Fix | soft* · soft* · soft* | nothing | stops after the fix | deviations (size increase), check fails, status, Not verified line missing |
+| `fix.3` Test | soft* · soft* · soft* | nothing | stops once per test report (verified, or before the one retry) | partial, failed after retry, unaccounted items |
+| `fix.4` Code review | soft* · soft* · **hard** `large` | large: soft*. Small, medium: nothing | stops | security risk area, `rec: user`, `S` finding |
+| `fix.5` Ship | not settable | — | — | ship blocked |
+
+\* soft only when nothing in the last column applies. On every gate, a
+failed report check, an unparsable report or files changed outside the
+reports also make it hard.
+
+The cell that applies is the run's size at the time of the gate (after a
+decrease, the smaller size's); at `/fix` 1, the assessment's proposed
+size.
+
+- **Setup reads it once.** Setup reads the `gates:` section of
+  `origin/<default>`'s `.logistics.yml` with the hooks, so a setting takes
+  effect once it is pushed, and shows the gates in force in one line,
+  `Gates in force (from origin/<default>:.logistics.yml): <value>` (no
+  line when nothing is set).
+- **Fixed for the run.** The value goes into the state file's `Gates:`
+  field when the run starts, and `step.sh` reads it there at every gate:
+  an edit of `.logistics.yml` changes the next run, never one in progress
+  (`resume` included).
+- **In the Log.** A gate that stops because of `hard` names `gates: hard`
+  among its reasons (`US<n>: gates: hard` after a story); a gate that
+  `soft` let pass when its size would have stopped it ends its line with
+  `; gates: soft`.
+
+The rules behind each row, and the `tests/step` cases that pin them, are in
+the [contract](https://github.com/pdemagny/logistics/blob/main/specs/configurable-gates/contracts/gates.md).
 
 ## Phase details
 
@@ -275,7 +352,11 @@ data (exit 0 go on, 1 stop with a `stop:` line, 2 could not run):
 - It checks Spec Kit and the agents, runs the board check with [board
   tracking](#board-tracking), fetches `origin/<default>` (a failed fetch
   stops the run), and reads that branch's `.specify/extensions.yml` as data
-  (a file it can't parse stops the run: it may hide a hook that commits).
+  (a file it can't parse stops the run: it may hide a hook that commits)
+  and the `gates:` section of its `.logistics.yml` (a malformed one stops
+  the run with its line). The coordinator shows the gates in force, when
+  any is set ([Configuring the gates](#configuring-the-gates)), and writes
+  them into the state file's `Gates:` field.
 
 The coordinator then reads `CLAUDE.md`/`AGENTS.md` and project memory (they
 override the skill).
@@ -300,7 +381,8 @@ Setup fetched `origin/<default>`, so the run starts from the remote head
 rather than a stale local copy. The coordinator enters a worktree
 (`EnterWorktree`), so every agent starts there, then makes one Bash call:
 `preflight.sh feat worktree` renames the branch to `<short-name>` and
-checks `.logistics.yml` is in the worktree, chained with `state.sh init`
+checks the worktree's `.logistics.yml` has a `tracker:` key (with board
+tracking), chained with `state.sh init`
 and the first `step.sh` call. The spec dir is `specs/<short-name>/` until phase 8 numbers it. The specifier runs `speckit-specify` from the brief and
 reports stories, requirements, open `[NEEDS CLARIFICATION]` markers with
 recommended answers, assumptions and unchecked checklist items. Before
@@ -329,7 +411,7 @@ services with reasons, constitution check, a size trigger (new service,
 permissions, exposure or dependency), and the decisions the spec didn't
 call for as assumptions with a recommendation and whether they need your
 call. `step.sh` decides what follows: only a blocker stops the run. Small and medium go straight to phase 4;
-large stops here, and after a soft phase 2 that gate opens with the spec
+large stops here by default ([Configuring the gates](#configuring-the-gates)), and after a soft phase 2 that gate opens with the spec
 summary; "ok" accepts its recommendations.
 
 ### 4 Design review (`feat-design-reviewer`)
@@ -363,7 +445,7 @@ The reviewer recommends on each finding (`apply`, `skip` or `user`), and
 and decides the gate. `user` marks a finding that
 removes or changes a story, a requirement or an acceptance criterion the
 brief asked for, overturns a spec assumption, or weakens a control the spec
-or plan sets. Large: always hard; you accept or reject each, with `user`
+or plan sets. Large: hard by default; you accept or reject each, with `user`
 findings first; if the planner amended the plan after the phase 3 gate, this
 gate says so under "What you should know". Small and medium: one gate for
 phases 3 and 4 ("Plan and design review"); after a soft phase 2 it opens with
@@ -411,7 +493,7 @@ turn. Each runs `speckit-implement` over its tasks,
 reads only what they need, runs build, tests and linters, never weakens a
 check, never commits. `step.sh` decides each story's gate and prints the
 next story's spawn: failing checks go back once; a needed design change is
-a hard gate. **Large:** a gate after each story.
+a hard gate. **Large:** a gate after each story by default.
 
 A check that could not run (no credentials, a service down, a manual step,
 a killed or timed-out run) leaves its task unticked and listed as Not
@@ -467,8 +549,8 @@ finding (`S`) or an acceptance criterion is not met; criteria that are
 `untested` are listed in the report and the PR but never stop the run. The
 hard gate lists the `user` findings first, as fix or leave; "ok" fixes every
 `apply` and leaves every `skip`, but not a `user` finding, which gets one
-follow-up. Large always stops, with every finding shown with its
-recommendation.
+follow-up. Large stops by default, with every finding shown with
+its recommendation.
 
 An `S` finding left unfixed is published in the PR body and
 the state file as id, file and title only. If the fixes fail their checks
@@ -539,7 +621,8 @@ nothing pushed`.
 
 ## Board tracking
 
-Optional, and off unless the repo has a `.logistics.yml`; setup, scope and
+Optional, and off unless the repo's `.logistics.yml` has a `tracker:`
+section (a file with only `gates:` leaves it off); setup, scope and
 the board's own workflows are in [install.md](install.md#5-board-tracking-optional).
 The skills run `.apm/skills/feat/scripts/tracker.sh` (no agent does): one
 `check` at the start of each run, which prints the board it will write to,
@@ -573,6 +656,13 @@ review part). `step.sh` writes the gate lines, `Current phase`, `Size`
 and the moves; the coordinator writes only the setup line, an override,
 the tracker's and the issue's lines. The agents' report files sit beside
 it, in `reports/`, never committed.
+
+The `Gates:` header field holds the gates the repository set
+([Configuring the gates](#configuring-the-gates)), `none` when it set
+nothing. `state.sh init` writes it once at setup and `set` refuses it, so
+the run keeps the gates it started with; like `Size:`, it is trusted as
+written: nothing guards it against an edit of the state file. A run
+started before the field existed has none, and every gate is the size's.
 
 Each gate line carries its tag, `[soft]` or `[hard]`, after the phase
 name, and its sub-lines say what happened at it:
@@ -739,7 +829,7 @@ No agent is continued: every spawn is fresh.
 | 1 | Assess      | `feat-bug-assessor` (assess mode)               | `assessment.md`, the proposed size                | **stop** if not a bug; **hard** by default; soft only when nothing needs your call (below)   |
 | 2 | Fix         | `feat-implementer` (bug mode)                   | the code, `fix.md`                                | soft unless deviations from the assessment, a failing check or a status other than `applied` |
 | 3 | Test        | `feat-bug-assessor` (test mode), always fresh   | `test.md` with `verified`, `partial` or `failed`  | soft on `verified`; **hard** on `partial` or an item left unaccounted; `failed` back to 2 once, then **hard**              |
-| 4 | Code review | `feat-code-reviewer` ×1 (small, medium) or ×2–3 | findings B, S, P, C with recommendations; fixes applied, then 3 again | **hard** on a security risk area, `Size: large`, or a `user` or `S` finding; else soft |
+| 4 | Code review | `feat-code-reviewer` ×1 (small, medium) or ×2–3 | findings B, S, P, C with recommendations; fixes applied, then 3 again | **hard** on a security risk area, `Size: large` (by default), or a `user` or `S` finding; else soft |
 | 5 | Ship        | `feat-shipper` (fix mode)                       | one `fix(<scope>)` commit, push, PR               | none                                                                                         |
 
 From phase 2 on (once the assess gate has set the size), each phase starts
@@ -748,10 +838,12 @@ with the base check of [When main moves](#when-main-moves).
 ### Gates
 
 `step.sh` decides each of them from the reports and the Log, as in `/feat`.
+The size rules below are the defaults: `.logistics.yml` can soften or
+harden phases 1–4 ([Configuring the gates](#configuring-the-gates)).
 
 - **Assess** stops the run when the report is not a bug (a missing
   feature points to `/brief #N`), invalid or unintelligible; the issue is
-  left untouched. It is soft only for a small fix with high confidence, a
+  left untouched. By default it is soft only for a small fix with high confidence, a
   reproduced bug, one remediation, no public behaviour change, a trusted
   report author, no open question, no security risk and no issue to
   create. Nothing from the report (command, script or code) runs unless
@@ -775,7 +867,7 @@ with the base check of [When main moves](#when-main-moves).
   offered. A verdict other than `verified` reaches ship only on your
   explicit words, logged and copied into the PR body.
 - **Code review**, in this order: a security bug is hard (the go-ahead
-  to ship is asked here); `Size: large` is hard; a `user` or `S` finding is
+  to ship is asked here); `Size: large` is hard by default; a `user` or `S` finding is
   hard; otherwise soft, and the reviewers' `apply` findings are fixed
   unasked. Fixes go to the implementer in fix mode, then a fresh test
   (`after review fixes`) must say `verified` again.

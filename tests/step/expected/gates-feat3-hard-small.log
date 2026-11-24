@@ -1,0 +1,6 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 3 Plan
+# /feat state: Test feature
+--
+- [x] 3 Plan [hard] — gates: hard; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none

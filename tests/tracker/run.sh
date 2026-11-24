@@ -489,3 +489,201 @@ for value in 'pass''word=hunter2' '"tok''en": "abc"' "tok""en: \${{ secrets.GH_T
   expect_out "tracker: created up/r#9"
 done
 ok
+
+# gates <args> < <text>: runs `tracker.sh gates` on stdin (no endpoint, the
+# stub gh first on PATH so a call would show); sets $out, $rc.
+gates() {
+  rc=0
+  out="$(cd "$repo" && PATH="$here/bin:$PATH" TRACKER_CASE="$case_dir" \
+    bash "$script" gates "$@" 2>"$case_dir/stderr")" || rc=$?
+  [ ! -s "$case_dir/stderr" ] || fail "stderr not empty: $(head -n 3 "$case_dir/stderr")"
+}
+
+# 18. Gates: both forms, both skills, comments and quoted values, any order;
+# canonical tokens (phases ascending, sizes small, medium, large), auto left
+# out; no gh call and no repo file read.
+new_case "gates section"
+write_config 'gates:
+  feat:
+    3: soft
+'
+gates feat <"$fixtures/gates.yml"
+expect_rc 0
+expect_out "tracker: gates feat.3=hard feat.4.small=hard feat.4.large=soft feat.6.large=soft"
+gates fix <"$fixtures/gates.yml"
+expect_rc 0
+expect_out "tracker: gates fix.1=soft fix.4.medium=hard"
+expect_no_calls
+ok
+
+new_case "gates beside tracker"
+# gates before and after tracker: both sections read.
+gates feat <<<"gates:
+  feat:
+    5: hard
+$CONFIG"
+expect_rc 0
+expect_out "tracker: gates feat.5=hard"
+gates fix <<<"${CONFIG}gates:
+  fix:
+    2: \"hard\" # quoted
+"
+expect_rc 0
+expect_out "tracker: gates fix.2=hard"
+# A tracker-only text has no gates.
+gates feat <<<"$CONFIG"
+expect_rc 0
+expect_out "tracker: gates none"
+expect_no_calls
+ok
+
+new_case "gates sizes and auto"
+# A mapping naming all three sizes gives three tokens.
+gates feat <<<'gates:
+  feat:
+    7: { small: hard, medium: hard, large: hard }'
+expect_rc 0
+expect_out "tracker: gates feat.7.small=hard feat.7.medium=hard feat.7.large=hard"
+# A section of auto only, an empty gates:, an empty skill section: none.
+gates feat <<<'gates:
+  feat:
+    2: auto
+    6: { large: auto }'
+expect_rc 0
+expect_out "tracker: gates none"
+gates fix <<<'gates:'
+expect_rc 0
+expect_out "tracker: gates none"
+gates fix <<<'gates:
+  fix:
+  feat:'
+expect_rc 0
+expect_out "tracker: gates none"
+expect_no_calls
+ok
+
+# bad_gates <text> <want output>: `gates feat` refuses the text, exit 1.
+bad_gates() {
+  gates feat <<<"$1"
+  expect_rc 1
+  expect_out "$2"
+}
+
+# 18b. Each error row of contracts/config.md, its line number named; nothing
+# from inside a mapping echoed but a size key matching ^[a-z]+$.
+new_case "gates errors"
+G=$'gates:\n  feat:\n'
+# indentation not 0, 2 or 4
+bad_gates $'gates:\n   feat:\n    3: hard' "$err_line 2: bad indentation (0, 2 or 4 spaces)"
+bad_gates "${G}     3: hard" "$err_line 3: bad indentation (0, 2 or 4 spaces)"
+# a block mapping's size line (its empty first line is refused below)
+bad_gates "${G}    2: soft"$'\n      large: soft' "$err_line 4: bad indentation (0, 2 or 4 spaces)"
+# a gates child not feat or fix
+bad_gates $'gates:\n  tiny:\n    3: soft' "$err_line 2: unknown skill tiny (feat or fix)"
+# a phase that is not settable
+bad_gates "${G}    1: soft" "$err_line 3: feat.1 is not settable (feat 2-7, fix 1-4)"
+bad_gates "${G}    3: hard"$'\n    8: soft' "$err_line 4: feat.8 is not settable (feat 2-7, fix 1-4)"
+bad_gates "${G}    03: hard" "$err_line 3: feat.03 is not settable (feat 2-7, fix 1-4)"
+bad_gates $'gates:\n  fix:\n    5: soft' "$err_line 3: fix.5 is not settable (feat 2-7, fix 1-4)"
+bad_gates $'gates:\n  fix:\n    0: soft' "$err_line 3: fix.0 is not settable (feat 2-7, fix 1-4)"
+# a plain value that is not one, an empty value, an unclosed { or quote
+must=' must be soft, hard, auto or { <size>: <value>, ... } on one line'
+bad_gates "${G}    3: maybe" "$err_line 3: gates.feat.3$must"
+bad_gates "${G}    6:" "$err_line 3: gates.feat.6$must"
+bad_gates "${G}    4: { small: hard" "$err_line 3: gates.feat.4$must"
+bad_gates "${G}    4: \"soft" "$err_line 3: gates.feat.4$must"
+# an empty mapping
+bad_gates "${G}    4: {}" "$err_line 3: empty size mapping in gates.feat.4"
+bad_gates "${G}    4: { }" "$err_line 3: empty size mapping in gates.feat.4"
+# a pair that is not <key>: <value>, a pair key not ^[a-z]+$, junk after }
+for m in '{ small hard }' '{ Small: hard }' '{ s1: hard }' '{ : hard }' \
+  '{ small: hard, }' '{ small: hard } x' '{ small: hard }}'; do
+  bad_gates "${G}    4: $m" "$err_line 3: bad size mapping in gates.feat.4"
+done
+# a pair key with spaces: none of its words in the message
+bad_gates "${G}    6: { ignore this: soft }" "$err_line 3: bad size mapping in gates.feat.6"
+[[ "$out" != *ignore* && "$out" != *this* ]] || fail "the mapping's words echoed"
+# a lowercase pair key that is no size: named
+bad_gates "${G}    4: { huge: hard }" "$err_line 3: unknown size huge in gates.feat.4 (small, medium or large)"
+# a size value that is not one
+bad_gates "${G}    4: { small: maybe }" "$err_line 3: gates.feat.4.small must be soft, hard or auto"
+bad_gates "${G}    4: { small: }" "$err_line 3: gates.feat.4.small must be soft, hard or auto"
+# the same size twice
+bad_gates "${G}    4: { small: hard, large: soft, small: soft }" "$err_line 3: duplicate gates.feat.4.small"
+# the same phase (plain and mapping), skill or gates twice
+bad_gates "${G}    3: hard"$'\n    3: { small: soft }' "$err_line 4: duplicate gates.feat.3"
+bad_gates "${G}    3: hard"$'\n  feat:' "$err_line 4: duplicate gates.feat"
+bad_gates "${G}    3: hard"$'\ngates:' "$err_line 4: duplicate gates"
+# a skill key with no gates above it
+bad_gates $'feat:\n  3: hard' "$err_line 1: feat outside gates"
+bad_gates "${CONFIG}  fix:" "$err_line 8: fix outside gates"
+# a phase key with no skill above it
+bad_gates $'gates:\n  3: hard' "$err_line 2: 3 outside gates.feat or gates.fix"
+bad_gates "${CONFIG}  3: hard" "$err_line 8: 3 outside gates.feat or gates.fix"
+# a tracker key under gates
+bad_gates $'gates:\n  provider: github' "$err_line 2: provider outside tracker"
+bad_gates "${G}    brief: Brief" "$err_line 3: brief outside statuses"
+# gates or a skill key with a value
+bad_gates $'gates: soft' "$err_line 1: gates takes no value"
+bad_gates $'gates:\n  feat: soft' "$err_line 2: gates.feat takes no value"
+# any other key
+bad_gates "${G}    soft: hard" "$err_line 3: unknown key"
+bad_gates $'gates:\nowner: alice' "$err_line 2: unknown key"
+# the other skill's section is parsed too
+bad_gates $'gates:\n  fix:\n    5: soft' "$err_line 3: fix.5 is not settable (feat 2-7, fix 1-4)"
+gates fix <<<"${G}    9: soft"
+expect_rc 1
+expect_out "$err_line 3: feat.9 is not settable (feat 2-7, fix 1-4)"
+expect_no_calls
+# check refuses a bad gates section beside tracker before any gh call
+bad_config "${CONFIG}${G}    4: { huge: hard }"$'\n' "$err_line 10: unknown size huge in gates.feat.4 (small, medium or large)"
+ok
+
+new_case "gates usage"
+for args in "" "bad" "feat fix" "Feat"; do
+  # shellcheck disable=SC2086 # word splitting is the point: each case's arguments
+  gates $args <<<'gates:'
+  expect_rc 2
+  expect_out "tracker: error: usage: tracker.sh check | read-issue <ref> | create-issue <brief-file | assessment-file> <owner/repo> | set-status <brief|building|review> <ref> | gates <feat|fix>"
+done
+expect_no_calls
+ok
+
+# 18d. No tracker key: every board subcommand is off, with no gh call, for a
+# gates-only file and for a file with neither key.
+new_case "gates only, tracker off"
+printf '# a brief\n' >"$repo/brief.md"
+for cfg in "$(cat "$fixtures/gates.yml")"$'\n' $'# nothing here\n\n' ''; do
+  write_config "$cfg"
+  for args in "check" "read-issue #11" "create-issue brief.md alice/app" \
+    "set-status building #11"; do
+    current="gates only, tracker off: $args"
+    # shellcheck disable=SC2086 # word splitting is the point: each case's arguments
+    tracker $args
+    expect_rc 0
+    expect_out "tracker: off (no tracker: in .logistics.yml)"
+  done
+done
+current="gates only, tracker off"
+expect_no_calls
+ok
+
+# 18e. Tracker plus gates: check as today, the gates section ignored.
+new_case "tracker plus gates"
+write_config "$CONFIG$(cat "$fixtures/gates.yml")"$'\n'
+printf 'alice/app\n' >"$case_dir/repo"
+printf 'repo, project\n' >"$case_dir/scopes"
+fixture board.json TrackerBoard
+tracker check
+expect_rc 0
+expect_out "tracker: ok users/alice/projects/2 (Brief, In progress, In review)"
+expect_ops "TrackerBoard"
+ok
+
+# 19. Bash 3.2: tracker.sh uses none of the constructs bash 3.2 lacks (the
+# list tests/step/run.sh greps step.sh for).
+current="bash 3.2 constructs only"
+if grep -nE -- 'declare -A|mapfile|readarray|,,\}|\^\^\}|declare -n|local -n|\[\[ -v|\[-[0-9]+\]|;;&|\|&' "$script"; then
+  fail "tracker.sh uses a construct bash 3.2 lacks"
+fi
+ok

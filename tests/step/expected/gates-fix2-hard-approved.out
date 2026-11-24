@@ -1,0 +1,15 @@
+answered
+base: same
+spawn: feat-bug-assessor
+  row: 3
+  mode: test
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/3-test.md
+  continue: fresh
+  cycle: first
+  inputs: @TOP@/specs/x/reports/3-test.in.md
+  trail script: @SKILL@/scripts/trail.sh
+  step script:	@SKILL@/scripts/step.sh	fix	@TOP@/specs/x/feat-state.md
+  boundary:	3	@TOP@/specs/x/reports/3-test.md
+boundary:	3	@TOP@/specs/x/reports/3-test.md
