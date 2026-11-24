@@ -985,6 +985,25 @@ pkey() {
   done
 }
 
+# pstray <line> <mode>: SL/SK = the lens and key of a code-reviewer section
+# the line starts that is outside the mode's lenses, else ''
+pstray() {
+  local k
+  SL='' SK=''
+  for k in 'Bugs (7a)' 'Spec (7a)' 'Standards (7a)' 'Acceptance criteria (7a)' \
+    'Security (7b)' 'Accepted design findings built (7b)' 'Performance (7c)' \
+    'Cuts (7d)' 'net (7d)' 'Readability (7e)'; do
+    SK=$k
+    if [[ $k == 'net (7d)' ]]; then SK=net; fi
+    if [[ $1 == "$SK: "* || $1 == "$SK:" ]]; then
+      SL=${k: -3:2}
+      if [[ +$2+ == *+$SL+* ]]; then SL='' SK=''; fi
+      return 0
+    fi
+  done
+  SK=''
+}
+
 # pclose: ends the open list field (an empty header with no item is unparsable)
 pclose() {
   local f=$CUR
@@ -1058,6 +1077,10 @@ parse() {
       esac
       (( ! P_BAD )) || break
       continue
+    fi
+    if [[ $2 == code-reviewer ]]; then
+      pstray "$line" "${3-}"
+      if [[ -n $SL ]]; then pbad "$n" "$SK" "$line" "a section of a lens not given ($SL)"; break; fi
     fi
     (( CUR >= 0 )) || continue
     [[ -n ${line//[[:space:]]/} ]] || continue

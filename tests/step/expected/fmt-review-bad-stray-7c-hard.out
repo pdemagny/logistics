@@ -1,0 +1,5 @@
+hard:
+- unparsable: 7-7a+7b-2.md: line 7 (Performance (7c)) — a section of a lens not given (7c)
+unparsable line: 7-7a+7b-2.md: Performance (7c): none
+counts: 0 findings, 0 to apply, 0 skipped
+answer call:	7	@TOP@/specs/x/reports/7-7a+7b-2.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7a+7b-2.md:@SUM@	sum=7-7c+7d+7e.md:@SUM@

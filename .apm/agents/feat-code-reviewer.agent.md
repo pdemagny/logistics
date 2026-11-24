@@ -183,9 +183,11 @@ not built is reported as a Security line.
 <report>` and `Unparsable: <file>: line <n> (<Key>) — <what is wrong>` (or `<file>: no
 <Key>: line`): read that report, write it again in the format below to
 your new report path, fixing the named line and any other line that breaks
-the format, and change nothing else: no other file, no new finding, no
-check run again. Its `Wrote:` lists the new report path in place of the
-old one. Hand back the digest.
+the format, and remove every section outside the spawn's `lenses:` (a
+`section of a lens not given` reason names the first of them). Change
+nothing else: no other file, no new finding, no check run again. Its
+`Wrote:` lists the new report path in place of the old one. Hand back the
+digest.
 
 The orchestrator may give a report path with its request (the spawn, or a
 message asking for a new report). Then, once the review is done, write the
@@ -208,7 +210,9 @@ back in place of a path you were given is a missing report.
 
 Only the sections of your lenses, each present, written `<Key>: none` when
 empty (`Accepted design findings built (7b): none` when no accepted `[sec]`
-finding was given). Each list item is one `- ` line at column 0, never
+finding was given). Omit the sections of the lenses you were not given,
+`net:` too (it is 7d's): never write them, not even as `none`; `step.sh`
+rejects them. Each list item is one `- ` line at column 0, never
 wrapped; write `none` for an empty field or section. A list field reads
 `<Key>: none`, or `<Key>:` alone followed by its items. An empty section
 is `<Key>: none` on its header line, never a `- none` item under it, and
@@ -240,6 +244,21 @@ net: -<N> lines possible | lean already
 Readability (7e):
 - <change> — at: <file>:<lines> — fix: <the change> — why: <why it reads better> — rec: <rec>
 Dismissed: <things a skill raised that are not real, with why>
+Wrote:
+- <the report path you were given>
+```
+
+A `7a+7b` report with nothing to say ends at its 7b sections: no 7c, 7d
+(`net:` included) or 7e line.
+
+```
+Bugs (7a): none
+Spec (7a): none
+Standards (7a): none
+Acceptance criteria (7a): none
+Security (7b): none
+Accepted design findings built (7b): none
+Dismissed: none
 Wrote:
 - <the report path you were given>
 ```

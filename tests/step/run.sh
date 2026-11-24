@@ -1581,7 +1581,8 @@ usage_no_log "the answer call's reports do not give back gate 7's findings"
 
 # the code reviewers' formats fail closed
 
-for v in bad-no-security:'Security \(7b\)' bad-indented:'Bugs \(7a\)' bad-star:'Security \(7b\)'; do
+for v in bad-no-security:'Security \(7b\)' bad-indented:'Bugs \(7a\)' bad-star:'Security \(7b\)' \
+  bad-stray-7c:'Performance \(7c\)' bad-stray-net:net; do
   review_case "format: code reviewer ${v%%:*}" feat small '7 Code review'
   put "code-reviewer/${v%%:*}" 7-7a+7b
   put code-reviewer/7c+7d+7e-zero 7-7c+7d+7e

@@ -1,0 +1,13 @@
+reformat
+unparsable line: 7-7a+7b.md: net: lean already
+spawn: feat-code-reviewer
+  row: 7a+7b
+  mode: reformat
+  lenses: 7a+7b
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/7-7a+7b-2.md
+  continue: fresh
+  from: @TOP@/specs/x/reports/7-7a+7b.md
+  unparsable: 7-7a+7b.md: line 7 (net) — a section of a lens not given (7d)
+boundary:	7	@TOP@/specs/x/reports/7-7a+7b-2.md	@TOP@/specs/x/reports/7-7c+7d+7e.md	sum=7-7c+7d+7e.md:@SUM@	snapshot=@SNAP@
