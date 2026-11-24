@@ -469,7 +469,9 @@ unnumbered feature dir (`SPECIFY_FEATURE_DIRECTORY`), fixes MEDIUM/LOW
 findings that don't change meaning, and reports CRITICAL/HIGH with proposed
 fixes, task IDs per story, the MVP slice, whether analyze ran, and
 unchecked checklist items. When analyze can't run, the tasker cross-checks
-spec, plan and tasks by hand and says so (`Analyze: not run`). `step.sh`
+spec, plan and tasks by hand and says so (`Analyze: not run`). `Analyze:
+ran` needs analyze's numbers beside it (`Analyze metrics:`, copied from its
+report); without them `step.sh` counts analyze as not run. `step.sh`
 decides the gate: hard only on CRITICAL/HIGH findings, analyze not run, a
 size increase, or checklist items the checklist answer you already gave
 doesn't cover (`speckit-implement` would stop on them).

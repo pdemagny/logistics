@@ -19,13 +19,18 @@ given, as one plain command with no `$(…)`:
 `SPECIFY_FEATURE_DIRECTORY='<absolute feature directory>' SPECIFY_FEATURE_NO_PERSIST=1 .specify/scripts/bash/<script> <its arguments>`.
 
 1. Run `speckit-tasks`.
-2. Run `speckit-analyze` (it is read-only; you fix what it finds). Where it
-   ends by asking whether to suggest remediation, don't ask: the answer is
-   yes, for every CRITICAL and HIGH finding. If it still can't run (the
-   script fails or the command is refused), cross-check spec, plan and
-   tasks by hand with analyze's checks instead, and report
-   `Analyze: not run` with the error: never pass the hand check off as
-   analyze.
+2. Run `speckit-analyze` (it is read-only; you fix what it finds). Running
+   it means following its steps through to its report, `**Metrics:**`
+   block included: running its prerequisite script alone is not running
+   it. Where it ends by asking whether to suggest remediation, don't ask:
+   the answer is yes, for every CRITICAL and HIGH finding. Anything short
+   of its report, whatever the reason (the script fails, the command is
+   refused, you stopped part way), is `Analyze: not run (<why>;
+   cross-checked by hand)`: cross-check spec, plan and tasks by hand with
+   analyze's checks instead, and never pass the hand check off as analyze.
+   `Analyze metrics:` copies the numbers of that `**Metrics:**` block, and
+   is `none` when analyze did not run: `step.sh` takes `ran` without them
+   as not run.
 3. Fix MEDIUM and LOW findings yourself when the fix doesn't change the
    spec's meaning, then rerun analyze. Leave CRITICAL and HIGH findings, and
    any fix that would change the spec's meaning, untouched and report them
@@ -58,7 +63,7 @@ Report file: the orchestrator may give a report path with its request (the
 spawn, or a message asking for a new report). Then, once the work is done,
 write the full report below (its `Wrote:` field listing that path) to that
 path with Write, as your last write, and hand back the digest: `MVP
-slice`, `Analyze` when not `ran`, `Open findings`, `Unchecked checklist
+slice`, `Analyze` and `Analyze metrics` when not `ran`, `Open findings`, `Unchecked checklist
 items`, each as its lines of the format, then the last step's block (Last
 step). Writing it is your job, never the
 orchestrator's (it never writes reports; a missing one fails the report
@@ -90,7 +95,7 @@ never wrapped; write `none` for an empty field or section. `Tasks:` holds
 the path only. `Per story:` has one item per group of tasks.md, in its
 order: `setup/foundational`, each `US<n>`, `polish`, each with its task
 IDs and ranges (`T001–T012` or `T001-T012`), comma-separated, or `none`.
-`Analyze:` is for the last run. `Open findings:` lists each finding
+`Analyze:` and `Analyze metrics:` are for the last run. `Open findings:` lists each finding
 severity first; with none, `Open findings: none` is the whole field, never
 `none` above an item. `Total tasks:` is a bare integer. `Wrote:` lists tasks.md always, plus every other file you
 created or changed in this spawn (artifacts you fixed), and the report
@@ -104,7 +109,8 @@ Per story:
 - US1: <…>
 - polish: <…>
 MVP slice: <task IDs>
-Analyze: ran | not run (<error>; cross-checked by hand)
+Analyze: ran | not run (<why>; cross-checked by hand)
+Analyze metrics: none | <n> requirements, <n> tasks, <n>% coverage, <n> ambiguities, <n> duplications, <n> critical
 Fixed: <MEDIUM/LOW findings fixed, "; "-separated, or none>
 Open findings:
 - CRITICAL | HIGH | MEDIUM | LOW — <finding> → <proposed fix> (<artifact>)

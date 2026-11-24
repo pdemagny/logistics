@@ -1,0 +1,6 @@
+- Size: medium
+- Agents: none (every spawn is fresh)
+- Current phase: 5 Tasks
+# /feat state: Test feature
+--
+- [!] 5 Tasks — unparsable: 5-tasks.md: line 10 (Analyze metrics) — a value outside its format; reformat 1 of 1
