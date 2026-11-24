@@ -1,0 +1,5 @@
+hard:
+- open markers: 2
+resume: 2 Specify
+phase2-mode: hard
+answer call:	2	@TOP@/specs/x/reports/2-specify.md	sum=2-specify.md:@SUM@

@@ -91,8 +91,15 @@ next spawn; you write the gate message and make the spawns.
   `soft`, `hard:`, `reformat`, `stop:` or `step: error:`; last line not
   starting `boundary:` or `answer call:` followed by a tab, or `done:`,
   unless it is the one `step: error:` line; tabs turned into spaces do not
-  parse), or a `step: usage:` line: make that boundary's call yourself,
-  with the words of the `boundary:` line printed with that spawn. A call
+  parse), a `step: usage:` line, or a `refused: report missing:` line (a
+  call made before its report was written; nothing logged): make that
+  boundary's call yourself, with the words of the `boundary:` line printed
+  with that spawn. Your own call refused the same way: the agent could not
+  write its report; spawn it again, fresh and once, from the spawn block
+  you already hold (with no message to the user, as a reformat), and act on
+  its hand-back as usual. A second refusal of that call (the re-spawn's
+  block, then your own call) is an error (*Errors*), with nothing to log;
+  its `retry` is that fresh spawn again, not the refused call. A call
   `step.sh` already decided prints that decision again and logs nothing,
   also after a reformat the agent ran. Act only on the hand-back of the
   agent you are waiting on; never spawn from an older one. A block not
@@ -137,6 +144,8 @@ next spawn; you write the gate message and make the spawns.
     spawn in one turn) or, after `done:`, the final message.
   - `stop:`: the final message.
   - `refused:`: ask the user again, one follow-up naming what is missing.
+    At a boundary, `refused: report missing: <file>: …` is the slip
+    fallback instead.
   - `base: moved` or a ship conflict: read the `read:` path once and follow
     it.
   - `added:` and `untracked, not in the diff:`: name them in the next
@@ -169,7 +178,8 @@ next spawn; you write the gate message and make the spawns.
   that step. Never spawn from memory.
 - **Errors.** `step: error: …` (exit 1): if the line ends ` (not logged)`,
   `S log '<state file>' '- [!] step: <the line without that suffix>'`;
-  then a hard gate with two answers, `retry` (the same command) and `stop`
+  then a hard gate with two answers, `retry` (the same command; after a
+  second `refused: report missing`, the fresh spawn: *Slip fallback*) and `stop`
   (`/<skill> resume` later). `step: usage: …` (exit 2): fix the call once,
   then as an error.
 - At a boundary never read a report file or an `inputs:` file (continued
@@ -380,7 +390,8 @@ worktree first (EnterWorktree with `path`). Then one Bash command: `T
 resume '<state file>'`. It runs the repair check first (a move that died
 part way prints a repair spawn: make it, and its `boundary:` call, before
 anything else), then prints `resume:`, the skill's resume lines and the
-current step's output, spawns included. Then `check` (the
+current step's output, spawns included; a gate the user has not answered
+is printed again instead (`hard:`, its reasons and its `answer call:`). Then `check` (the
 *board-check step*), then the current phase's move. Right after, read the
 state file (Read): the recap comes from it, and so does any logged summary
 a gate shows. That is the one time you read the state file. Recap in one

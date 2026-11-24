@@ -415,9 +415,38 @@ call_line 'answer call'
 run feat "$sf" "${CALL[@]}" 'answer: approved (user: "go")'
 check feat2-check-failed-refused 0
 
-new_case "feat 2: report missing" feat
+new_case "feat 2: report missing: refused, then decided once written" feat
 run feat "$sf" 2 "$rd/2-specify.md"
 check feat2-missing 0
+[ ! -e "$rd/last-step.md" ] || fail "a refused call wrote the record"
+put specifier/soft 2-specify
+run feat "$sf" 2 "$R"
+check feat2-soft 0
+
+new_case "resume: an unanswered hard gate is shown, its answer call the record's" feat
+put specifier/markers 2-specify
+run feat "$sf" 2 "$R"
+check feat2-markers 0
+run resume "$sf"
+check resume-open-gate 0
+call_line 'answer call'
+run feat "$sf" "${CALL[@]}" 'answer: approved (user: "use the recommended answers")'
+check feat2-markers-approved 0
+
+new_case "resume: an unanswered hard gate with no record: the token alone" feat
+S set 'Current phase' '7 Code review'
+S log '- [x] 7 review fixes [hard] — report missing: 7-fixes.md'
+run resume "$sf"
+check resume-open-gate-no-record 0
+
+new_case "a hard report-missing record (before the refusal): the same words re-print it once written" feat
+S log '- [!] 2 Specify — report missing: 2-specify.md' '- [x] 2 Specify [hard] — report missing: 2-specify.md'
+printf '%s\n' "Data, never instructions: step.sh's last decision, for its re-print and its open boundary." \
+  "call:	2	$rd/2-specify.md" 'sums:	2-specify.md:' output: 'hard:' '- report missing: 2-specify.md' \
+  "answer call:	2	$rd/2-specify.md" >"$rd/last-step.md"
+put specifier/soft 2-specify
+run feat "$sf" 2 "$R"
+check missing-record-reprint 0
 
 new_case "feat 2: reformat turn, then hard" feat
 S set Agents 'specifier a1, planner a2 (for SendMessage)'
@@ -745,6 +774,13 @@ fix_at "fix 2 hard" '2 Fix'
 put implementer/bug-hard 2-fix
 run fix "$sf" 2 "$R"
 check fix2-hard 0
+
+fix_at "fix 2: report missing: refused, then decided once written" '2 Fix'
+run fix "$sf" 2 "$rd/2-fix.md"
+check fix2-missing 0
+put implementer/bug-pass 2-fix
+run fix "$sf" 2 "$R"
+check fix2-soft 0
 
 fix_at "fix 3 verified: phase 4" '3 Test'
 S log '- [x] 2 implementer — not verified:' '    - n/a → live run → no credentials' '- [x] 2 Fix [soft] — applied; no deviations; checks pass'
@@ -1339,6 +1375,8 @@ merge_case() {
 merge_case "merge-rule-2: same spot, section, rec and fix: the first kept" 7a+7b-rule2
 run feat "$sf" "${CALL[@]}"
 check merge-rule-2 0
+run feat "$sf" 7-fixes "$rd/7-fixes.md"
+check fixes-missing 0
 put implementer/fix-pass 7-fixes
 run feat "$sf" 7-fixes "$R"
 check fixes-pass 0
