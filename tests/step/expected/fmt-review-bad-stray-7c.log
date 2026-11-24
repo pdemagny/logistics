@@ -1,0 +1,6 @@
+- Size: small
+- Agents: none (every spawn is fresh)
+- Current phase: 7 Code review
+# /feat state: Test feature
+--
+- [!] 7 Code review — unparsable: 7-7a+7b.md: line 7 (Performance (7c)) — a section of a lens not given (7c); reformat 1 of 1
