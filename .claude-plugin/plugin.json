@@ -1,6 +1,6 @@
 {
   "name": "logistics",
-  "version": "0.14.0",
+  "version": "1.0.0",
   "description": "From a feature idea or a bug report to a reviewed PR: /brief writes the brief, /feat runs Spec Kit phases in feat-* subagents sized by model and effort, /fix runs Spec Kit's bug extension the same way, /tiny makes a trivial change in one session.",
   "author": {
     "name": "Pierre Demagny",

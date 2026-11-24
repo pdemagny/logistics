@@ -55,7 +55,7 @@ again with another tag, or none, moves you:
 
 <!-- x-release-please-start-version -->
 ```sh
-apm install -g pdemagny/logistics#v0.14.0 -t claude
+apm install -g pdemagny/logistics#v1.0.0 -t claude
 ```
 <!-- x-release-please-end -->
 
