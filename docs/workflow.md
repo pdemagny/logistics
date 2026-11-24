@@ -32,7 +32,9 @@ holds a size table or a gate table: `step.sh` applies them.
   The coordinator calls `step.sh` itself at setup, after each reviewer
   batch, for each answer at a hard gate, after a move, when an agent's
   block slipped (missing or unreadable: the same call again, which
-  re-prints a decision already made and logs nothing) and for the `done:`
+  re-prints a decision already made and logs nothing; a call made before
+  its report was written is refused, `refused: report missing`, and the
+  agent is spawned again once) and for the `done:`
   check after the shipper. Setup is two
   calls to
   [`preflight.sh`](https://github.com/pdemagny/logistics/blob/main/.apm/skills/feat/scripts/preflight.sh)
@@ -591,7 +593,8 @@ name, and its sub-lines say what happened at it:
   into a hard gate, written just before the boundary call.
 
 `resume` reads the tags and the `answer:` lines, so an answered gate is
-never asked again and an amend it led to is not redone.
+never asked again and an amend it led to is not redone. A gate the user
+has not answered yet is shown again by `resume`, never stepped over.
 
 ## When main moves
 

@@ -40,7 +40,9 @@
 # output and write nothing (no Log line, no record, no commit); else its token
 # and report paths must be the record's open boundary (its issued call line);
 # with no record, the tokens the state allows. A call refuses to write, with a
-# step: error, when the state file changed since it read it.
+# step: error, when the state file changed since it read it. A one-report
+# boundary whose report is absent or empty is `refused: report missing: …`,
+# nothing written; resume prints an unanswered gate again, not the next step.
 #
 # Exit 0 decided (refused: included), 1 one `step: error: ...` line (logged as
 # `- [!] step: <line>` when state.sh accepts it, else ending ` (not logged)`),
@@ -464,6 +466,11 @@ accept() {
     [[ ${RC_CALLS[i]} == "$CL" ]] || continue
     record_sums
     if [[ $RS == "${RC_SUMS[i]}" ]]; then REPRINT=1; return 0; fi
+    # a hard gate decided while one of its reports was missing (a state file
+    # from before do_boundary refused such a call, a reviewer batch, a move):
+    # the same words re-print it once the report is there, the gate still the
+    # one to answer
+    if [[ $RC_VERDICT == hard: && "${RC_SUMS[i]}$TAB" == *":$TAB"* ]]; then REPRINT=1; return 0; fi
   done
   (( RC_HAS )) || return 0
   if [[ -z $RC_ISSUED ]]; then die "no boundary is open ($RC_VERDICT)"; fi
@@ -4283,6 +4290,11 @@ do_boundary() {
   (( ${#A_REPORTS[@]} == 1 )) || usage "boundary $tok takes one report: $SYN"
   sum_of "${A_REPORTS[0]##*/}"
   [[ -z $S ]] || usage "the report of boundary $tok is new: no sum=: $SYN"
+  # a report not written yet (absent or empty): the call came before it, so
+  # it is refused and nothing is written; the same call decides once it is
+  f=${A_REPORTS[0]}
+  if [[ ! -e $f && -n $RENUM && ${RENUM##*/} == "${f##*/}" ]]; then f=$RENUM; fi
+  if [[ ! -s $f ]]; then refuse "report missing: ${f##*/}: write it, then call again"; return 0; fi
   phase_head "$tok"
   role_of "$tok"
   check_report "${A_REPORTS[0]}" "$AGENT" "$MODE" 1
@@ -4325,7 +4337,29 @@ do_resume() {
   # the repair check first: a move that died part way is repaired before
   # anything else
   if repair_due; then rebase_spawn repair repair; return 0; fi
+  # a gate the user has not answered is shown again, never stepped over
+  open_gate
+  if (( OG >= 0 )); then show_gate; return 0; fi
   resume_next
+}
+
+# show_gate: the open gate (OG) as its decision printed it: hard:, its
+# reasons from the Log line and its answer call (the record's, when it is
+# this gate's; else the token alone, enough for back to and stop)
+show_gate() {
+  local rest=${LG[OG]#*' — '} l w=()
+  VERDICT=hard
+  while [[ -n $rest ]]; do
+    reason "${rest%%'; '*}"
+    if [[ $rest == *'; '* ]]; then rest=${rest#*'; '}; else rest=; fi
+  done
+  record_read
+  for l in ${RC_OUT[@]+"${RC_OUT[@]}"}; do
+    [[ $l == "answer call:$TAB"* ]] || continue
+    IFS=$TAB read -r -a w <<<"${l#"answer call:$TAB"}"
+    if [[ ${w[0]-} == "$OG_TOKEN" ]]; then out_call 23 'answer call:' "${w[@]}"; return 0; fi
+  done
+  out_call 23 'answer call:' "$OG_TOKEN"
 }
 
 do_setup() {
