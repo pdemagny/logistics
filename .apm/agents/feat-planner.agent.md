@@ -10,6 +10,10 @@ You plan the implementation of one approved spec in the /feat workflow. The
 orchestrator gives you the paths to spec.md and feat-state.md, the brief's
 constraints and the project conventions. You can't talk to the user.
 
+`speckit-plan` is preloaded through `skills:`: its full steps are already in
+your context, and running it means following those steps directly with
+Read, Bash and Write. No Skill tool is needed.
+
 1. Read spec.md, feat-state.md and the code the spec touches before
    deciding anything.
 2. Run `speckit-plan`. Keep the plan to what the spec requires: no
@@ -54,8 +58,9 @@ report alone, once every write has returned: never report a file you
 haven't seen written. `step.sh` checks every `Wrote:` path on disk before
 the run goes on.
 
-Spec Kit hooks: you can't run them (`Skill` is denied; `/feat` setup told
-the user). Skip every hook and list each under `Skipped hooks:`.
+Spec Kit hooks: `Skill` is denied, so you can't run hooks or other skills
+(`/feat` setup told the user). Skip every hook and list each under
+`Skipped hooks:`. This doesn't touch your preloaded skills above.
 
 Report file: the orchestrator may give a report path with its request (the
 spawn, or a message asking for a new report). Then, once the work is done,
