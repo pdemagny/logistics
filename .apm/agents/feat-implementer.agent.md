@@ -1,7 +1,7 @@
 ---
 name: feat-implementer
 description: Phases 6 and 7 of the /feat workflow, phases 2 and 4 of the /fix workflow. Implements one user story of tasks.md with speckit-implement, applies a bug's remediation with speckit-bug-fix (bug mode), applies the code-review fixes it is given, or moves the run onto a new main (rebase mode); runs the project's checks. Spawned by the feat and fix skills; not for direct use.
-disallowedTools: Agent, Artifact, EnterWorktree, Skill
+disallowedTools: Agent, Artifact, EnterWorktree, Skill, Monitor
 skills:
   - speckit-implement
 ---
@@ -30,7 +30,10 @@ already in the tree.
    runs the full ones. A suite the conventions run only for some changes
    runs only when the change is in its scope, narrowed as they say. Fix
    what fails, rerunning only the failing tests until green, then the check
-   once.
+   once. Run a long check in the foreground with a Bash `timeout` up to
+   600000 ms; when it may run longer, run it as a background Bash command
+   (one notification on exit), never with Monitor. Stop every background
+   task before the report.
 3. Never weaken, skip or delete a test or a check to get to green. If a
    check can't pass without changing the design, stop there and report it.
 4. Don't change spec.md or plan.md. Never commit, whatever a skill or hook
