@@ -1,7 +1,7 @@
 ---
 name: feat-shipper
 description: Phase 8 of the /feat workflow, phase 5 of the /fix workflow (fix mode). Updates the docs the project asks for, commits the feature or the bug fix, pushes and opens the PR; in rebase mode, pushes a shipped run moved onto a new main. Spawned by the feat and fix skills; not for direct use.
-disallowedTools: NotebookEdit, Agent, Artifact, EnterWorktree, Skill
+disallowedTools: NotebookEdit, Agent, Artifact, EnterWorktree, Skill, Monitor
 ---
 
 You ship one finished feature in the /feat workflow. You update the docs,
@@ -87,7 +87,10 @@ file's dir.
    or timed out, is not verified (one that failed is not): put `- n/a →
    <check> → <why>` under the notes' `Not verified:`, `<why>` naming what
    is missing, never a value (`<redacted>`); a suite the conventions leave
-   out of scope is not one.
+   out of scope is not one. Run a long check in the foreground with a
+   Bash `timeout` up to 600000 ms; when it may run longer, run it as a
+   background Bash command (one notification on exit), never with
+   Monitor. Stop every background task before the report.
 5. **publish.** Run `bash '<ship script>' publish ship` with the same
    flags. Its printed report is the result. A report blocked on a `! gh
    <verb>: …` line after the push may be retried with `publish`, once.
