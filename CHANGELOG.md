@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/pdemagny/logistics/compare/v1.0.0...v1.1.0) (2026-11-26)
+
+
+### Features
+
+* **skills:** read skills by path so agents start without the skills listing ([c49f79b](https://github.com/pdemagny/logistics/commit/c49f79b4d413b337bed4f3c7c62051973be3240f))
+
+
+### Bug Fixes
+
+* **agents:** say preloaded skills run without the Skill tool ([b0f9c82](https://github.com/pdemagny/logistics/commit/b0f9c82c83d3d3eebcd767a9867ce77e2c0d7d68))
+* **skills:** accept "Analyze: ran" in /feat phase 5 only with analyze's saved report ([ab3a81d](https://github.com/pdemagny/logistics/commit/ab3a81d5a018765d215f493c83b1cc71cf3ffae6))
+
 ## [1.0.0](https://github.com/pdemagny/logistics/compare/v0.14.0...v1.0.0) (2026-11-24)
 
 
