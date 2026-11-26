@@ -1,0 +1,16 @@
+soft
+base: same
+spawn: feat-implementer
+  row: 6
+  mode: story
+  model: sonnet
+  effort: low
+  report: @TOP@/specs/x/reports/6-US1.md
+  continue: fresh
+  who: US1
+  story: US1
+  inputs: @TOP@/specs/x/reports/6-US1.in.md
+  step script:	@SKILL@/scripts/step.sh	feat	@TOP@/specs/x/feat-state.md
+  boundary:	6	@TOP@/specs/x/reports/6-US1.md
+boundary:	6	@TOP@/specs/x/reports/6-US1.md
+answer call:	5	@TOP@/specs/x/reports/5-tasks.md	sum=5-tasks.md:@SUM@

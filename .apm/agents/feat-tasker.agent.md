@@ -34,9 +34,13 @@ given, as one plain command with no `$(…)`:
    command you ran and its error, or where you stopped), never a choice to
    skip: cross-check spec, plan and tasks by hand with
    analyze's checks instead, and never pass the hand check off as analyze.
-   `Analyze metrics:` copies the numbers of that `**Metrics:**` block, and
-   is `none` when analyze did not run: `step.sh` takes `ran` without them
-   as not run.
+   When it ran, save its report, verbatim and whole (its `**Metrics:**`
+   block included), with Write to `reports/5-analyze.md` in the feature
+   directory, overwriting the one of an earlier run, and list it on
+   `Wrote:`. `Analyze metrics:` copies the numbers of that `**Metrics:**`
+   block, and is `none` when analyze did not run: `step.sh` takes `ran` as
+   not run without them, without `5-analyze.md` or without its
+   `**Metrics:**` block, and gates hard when the numbers differ.
 3. Fix MEDIUM and LOW findings yourself when the fix doesn't change the
    spec's meaning, then rerun analyze. Leave CRITICAL and HIGH findings, and
    any fix that would change the spec's meaning, untouched and report them
@@ -102,10 +106,10 @@ never wrapped; write `none` for an empty field or section. `Tasks:` holds
 the path only. `Per story:` has one item per group of tasks.md, in its
 order: `setup/foundational`, each `US<n>`, `polish`, each with its task
 IDs and ranges (`T001–T012` or `T001-T012`), comma-separated, or `none`.
-`Analyze:` and `Analyze metrics:` are for the last run. `Open findings:` lists each finding
+`Analyze:`, `Analyze metrics:` and `5-analyze.md` are for the last run. `Open findings:` lists each finding
 severity first; with none, `Open findings: none` is the whole field, never
 `none` above an item. `Total tasks:` is a bare integer. `Wrote:` lists tasks.md always, plus every other file you
-created or changed in this spawn (artifacts you fixed), and the report
+created or changed in this spawn (`5-analyze.md`, artifacts you fixed), and the report
 path, when one was given, one `- ` item per line.
 
 ```

@@ -1,0 +1,3 @@
+hard:
+- analyze not run (no analyze report)
+answer call:	5	@TOP@/specs/x/reports/5-tasks.md	sum=5-tasks.md:@SUM@

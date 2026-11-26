@@ -14,4 +14,5 @@ Unchecked checklist items: none
 Skipped hooks: none
 Wrote:
 - @TOP@/specs/x/tasks.md
+- @TOP@/specs/x/reports/5-analyze.md
 - @REPORT@

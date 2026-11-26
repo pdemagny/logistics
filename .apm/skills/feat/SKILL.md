@@ -270,7 +270,9 @@ Spawn `feat-tasker`. **Hard** shows `step.sh`'s reasons: open
 CRITICAL/HIGH findings with their proposed fixes (accepted fixes are
 `changed`: the tasker amends and reruns analyze), analyze not run (with its
 error: spec, plan and tasks were only cross-checked by hand), `ran`
-without analyze's metrics, or not said,
+without analyze's metrics or its saved report (`reports/5-analyze.md`, no
+analyze report or no Metrics block), metrics that differ from that
+report, or not said,
 each `story.sh:` line where tasks.md and the report differ (recommend
 sending it to the tasker as an accepted fix), a size increase, unanswered
 checklist items (`speckit-implement` would stop on them), and `large`.
