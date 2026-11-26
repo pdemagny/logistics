@@ -354,14 +354,18 @@ data (exit 0 go on, 1 stop with a `stop:` line, 2 could not run):
   stops the run), and reads that branch's `.specify/extensions.yml` as data
   (a file it can't parse stops the run: it may hide a hook that commits)
   and the `gates:` section of its `.logistics.yml` (a malformed one stops
-  the run with its line). The coordinator shows the gates in force, when
+  the run with its line). It also resolves each skill the run reads by path
+  (`<project>/.claude/skills/<name>/SKILL.md`, then `~/.claude/skills`) and
+  prints a `skill <name>: <path>` line for each; a missing lens skill, an
+  allowed hook whose skill can't be found, or (`/fix`) a missing bug skill
+  stops the run. The coordinator shows the gates in force, when
   any is set ([Configuring the gates](#configuring-the-gates)), and writes
   them into the state file's `Gates:` field.
 
 The coordinator then reads `CLAUDE.md`/`AGENTS.md` and project memory (they
 override the skill).
 
-- The specifier, planner and tasker can't run hooks (`Skill` is denied), so
+- The specifier, planner and tasker can't run hooks (they run no hooks), so
   every hook under `before_`/`after_` `specify`, `plan`, `tasks` or `analyze`,
   git ones included, won't run; an `implement` hook that would branch or
   commit (by its names: the `git` extension, or a word such as `commit`,
@@ -789,8 +793,8 @@ reviewer groups are `sizes.json`'s `fix` part.
   coordinator calls it at setup, after the review batch, for each answer,
   after a move, when an agent's block slipped and for the `done:` check
   after the shipper. Setup is two `preflight.sh` calls around `EnterWorktree`:
-  the first classifies the argument, checks the install and the bug
-  extension, runs the board check, fetches the default branch, reads the
+  the first classifies the argument, checks the install and the three bug
+  skills (resolving each to a path), runs the board check, fetches the default branch, reads the
   hooks as data, reads an issue's title and its author's association, and
   builds a slug unused by any bug dir, local branch or remote branch
   `fix-<slug>`; the second renames the branch to `fix-<slug>`, chained
@@ -997,13 +1001,13 @@ spec. Its `apply` findings are applied, `skip` ones go in the PR body.
 | Agent                  | Phase(s)                                                                       | small size                                     | Denied tools                                                     | Loads                                              | Writes                                               |
 | ---------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
 | `feat-brief-reviewer`  | 1                                                                              | sonnet · medium                                | Edit, Write, NotebookEdit, Agent, Artifact, EnterWorktree, Skill | —                                                  | nothing                                              |
-| `feat-bug-assessor`    | `/fix` 1 (assess mode), 3 (test mode)                                          | opus · medium (assess), sonnet · medium (test) | Edit, NotebookEdit, Agent, Artifact, EnterWorktree               | `speckit-bug-assess`, `speckit-bug-test`           | assessment.md, test.md                               |
+| `feat-bug-assessor`    | `/fix` 1 (assess mode), 3 (test mode)                                          | opus · medium (assess), sonnet · medium (test) | Edit, NotebookEdit, Agent, Artifact, EnterWorktree, Skill        | `speckit-bug-assess`, `speckit-bug-test`           | assessment.md, test.md                               |
 | `feat-specifier`       | 2                                                                              | sonnet · medium                                | NotebookEdit, Agent, Artifact, EnterWorktree, Skill              | `speckit-specify`                                  | spec.md                                              |
 | `feat-planner`         | 3, 4 (amend)                                                                   | opus · high                                    | NotebookEdit, Agent, Artifact, EnterWorktree, Skill              | `speckit-plan`                                     | plan.md, design docs; accepted findings into spec.md |
-| `feat-design-reviewer` | 4                                                                              | sonnet · medium                                | Edit, Write, NotebookEdit, Agent, Artifact, EnterWorktree        | per lens, on demand                                | nothing                                              |
+| `feat-design-reviewer` | 4                                                                              | sonnet · medium                                | Edit, Write, NotebookEdit, Agent, Artifact, EnterWorktree, Skill | per lens, on demand                                | nothing                                              |
 | `feat-tasker`          | 5                                                                              | sonnet · medium                                | NotebookEdit, Agent, Artifact, EnterWorktree, Skill              | `speckit-tasks`, `speckit-analyze`                 | tasks.md, small artifact fixes                       |
-| `feat-implementer`     | 6, 7 (fix mode), any boundary (rebase mode); `/fix` 2 (bug mode), 4 (fix mode) | sonnet · medium                                | Agent, Artifact, EnterWorktree                                   | `speckit-implement`; `speckit-bug-fix` in bug mode | code, tasks.md; fix.md in bug mode                   |
-| `feat-code-reviewer`   | 7                                                                              | sonnet · medium                                | Edit, Write, NotebookEdit, Agent, Artifact, EnterWorktree        | per lens, on demand                                | nothing                                              |
+| `feat-implementer`     | 6, 7 (fix mode), any boundary (rebase mode); `/fix` 2 (bug mode), 4 (fix mode) | sonnet · medium                                | Agent, Artifact, EnterWorktree, Skill                            | `speckit-implement`; `speckit-bug-fix` in bug mode | code, tasks.md; fix.md in bug mode                   |
+| `feat-code-reviewer`   | 7                                                                              | sonnet · medium                                | Edit, Write, NotebookEdit, Agent, Artifact, EnterWorktree, Skill | per lens, on demand                                | nothing                                              |
 | `feat-shipper`         | 8; `/fix` 5 (fix mode); `rebase` (rebase mode)                                 | haiku · medium                                 | NotebookEdit, Agent, Artifact, EnterWorktree, Skill              | —                                                  | docs, commits, PR                                    |
 
 <!-- sizes-end agents-table -->
@@ -1012,7 +1016,7 @@ spec. Its `apply` findings are applied, `skip` ones go in the PR body.
 7a–7d only, and `/tiny`'s fresh review with lens 7a. Agent files carry no model or effort: `/feat` and `/fix` pass
 both on every spawn, as `step.sh` prints them from `sizes.tsv` (`/brief` for
 `feat-brief-reviewer`). Tool limits are deny lists (`disallowedTools`) rather
-than allow lists, so a new tool is available to an agent unless denied. Every agent denies `Artifact` and `EnterWorktree` (`mise run lint` checks it), and the five that never invoke a skill by name also deny `Skill`. The saving from these denials depends on your setup (which tools and skills your Claude Code loads, and whether the run is interactive, background or headless). No agent but the shipper commits (the implementer's rebase mode makes
+than allow lists, so a new tool is available to an agent unless denied. Every agent denies `Artifact`, `EnterWorktree` and `Skill` (`mise run lint` checks it): the agents that use a skill read its `SKILL.md` at the path the coordinator passes (setup resolves it and stops when it can't), so no skills listing is loaded into their context. The saving from these denials depends on your setup (which tools and skills your Claude Code loads, and whether the run is interactive, background or headless). No agent but the shipper commits (the implementer's rebase mode makes
 one temporary WIP commit, undone before it reports and never pushed), and
 no agent spawns further agents.
 Every report ends with `Wrote:`, absolute paths: the specifier, planner and

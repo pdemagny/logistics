@@ -23,8 +23,9 @@
 # steps run in: kind, usage, rebase target, brief, candidate, brief in
 # checkout, title, size, size note, short name, map, issue, behaviour,
 # acceptance, github, author, install, bug extension, board, gates, default, fetch,
-# hook won't run, hook would branch or commit, hooks allowed, slug, pointer,
-# searched, spawn note, stop; worktree mode: worktree, branch, flag. Text read from the
+# hook won't run, hook would branch or commit, hooks allowed, skill <name>
+# (one per skill: its SKILL.md path), slug, pointer, searched, spawn note,
+# stop; worktree mode: worktree, branch, flag. Text read from the
 # argument, a brief, an issue or git comes only after its key, on one line,
 # control characters replaced by spaces; nothing read is evaluated or
 # executed. Nothing on stderr.
@@ -63,8 +64,8 @@ slot() {
     'short name') S=10 ;; map) S=11 ;; issue) S=12 ;; behaviour) S=13 ;; acceptance) S=14 ;;
     github) S=15 ;; author) S=16 ;; install) S=17 ;; 'bug extension') S=18 ;; board) S=19 ;;
     gates) S=20 ;; default) S=21 ;; fetch) S=22 ;; "hook won't run") S=23 ;; 'hook would branch or commit') S=24 ;;
-    'hooks allowed') S=25 ;; slug) S=26 ;; pointer) S=27 ;; searched) S=28 ;; 'spawn note') S=29 ;; stop) S=99 ;;
-    worktree) S=30 ;; branch) S=31 ;; flag) S=32 ;;
+    'hooks allowed') S=25 ;; 'skill '*) S=26 ;; slug) S=27 ;; pointer) S=28 ;; searched) S=29 ;; 'spawn note') S=30 ;; stop) S=99 ;;
+    worktree) S=31 ;; branch) S=32 ;; flag) S=33 ;;
     *) S=98 ;;
   esac
 }
@@ -286,8 +287,44 @@ brief_fields() {
 
 # --- install ---------------------------------------------------------------------
 
+# The skills the agents read by path (they deny the Skill tool): setup finds
+# each SKILL.md, in the project's .claude/skills then ~/.claude/skills, and
+# prints its path.
+SEEN=" "
+
+# skill_path <name>: SP = the skill's SKILL.md; 1 when neither place has it
+skill_path() {
+  SP="$top/.claude/skills/$1/SKILL.md"
+  if [ -f "$SP" ]; then return 0; fi
+  if [ -n "${HOME:-}" ]; then
+    SP="$HOME/.claude/skills/$1/SKILL.md"
+    if [ -f "$SP" ]; then return 0; fi
+  fi
+  SP=""
+  return 1
+}
+
+# need_skill <name>: its `skill <name>: <path>` line, once per run; 1 when
+# the skill is not found
+need_skill() {
+  skill_path "$1" || return 1
+  case "$SEEN" in *" $1 "*) return 0 ;; esac
+  SEEN="$SEEN$1 "
+  emit "skill $1" "$SP"
+}
+
+# hook_skill <command>: HS = the skill directory of a Spec Kit hook command
+# (speckit.a.b -> speckit-a-b); 1 for an empty command or one not starting
+# `speckit.` (research R1)
+hook_skill() {
+  HS=""
+  case "$1" in speckit.?*) ;; *) return 1 ;; esac
+  HS="speckit-${1#speckit.}"
+  HS="${HS//./-}"
+}
+
 step_install() {
-  local agents a d f ok miss=() dirs
+  local agents a d f ok miss=() dirs lens=() bug=()
   [ -d "$top/.specify" ] || stop ".specify/ is missing: run specify init --here --integration claude"
   if [ "$skill" = feat ]; then
     agents="specifier planner design-reviewer tasker implementer code-reviewer shipper"
@@ -307,17 +344,22 @@ step_install() {
     [ "$ok" = 1 ] || miss+=("feat-$a")
   done
   if [ "${#miss[@]}" -gt 0 ]; then stop "agents not installed: $(join "${miss[@]}") (install or update logistics)"; fi
-  if [ "$skill" = fix ]; then
-    ok=0
-    if [ -d "$top/.specify/extensions/bug" ]; then ok=1; fi
-    dirs=("$top/.claude/skills")
-    if [ -n "${HOME:-}" ]; then dirs+=("$HOME/.claude/skills"); fi
-    for d in "${dirs[@]}"; do
-      for a in assess fix test; do
-        if [ -d "$d/speckit-bug-$a" ]; then ok=1; fi
-      done
+  # the rebase spawns (the implementer and the shipper) read no lens skill
+  if [ "$kind" != rebase ]; then
+    for a in security-and-hardening performance-optimization; do
+      need_skill "$a" || lens+=("$a")
     done
-    [ "$ok" = 1 ] || stop "the bug extension is missing: run specify extension add bug in this project"
+  fi
+  if [ "$skill" = fix ]; then
+    for a in assess fix test; do
+      need_skill "speckit-bug-$a" || bug+=("speckit-bug-$a")
+    done
+  fi
+  if [ "${#bug[@]}" -gt 0 ]; then
+    stop "the bug extension is missing ($(join "${bug[@]}") not found): run specify extension add bug in this project"
+  fi
+  if [ "${#lens[@]}" -gt 0 ]; then
+    stop "skills not installed: $(join "${lens[@]}") (searched $top/.claude/skills and ~/.claude/skills; a skill only a plugin provides isn't found): npx -y skills@1.7.6 add https://github.com/addyosmani/agent-skills/tree/0.6.13/skills -s interview-me security-and-hardening performance-optimization -a claude-code -g -y"
   fi
   emit install ok
   if [ "$skill" = fix ]; then emit 'bug extension' "$(bug_version)"; fi
@@ -629,7 +671,7 @@ would_commit() {
 # the tree the run's worktree gets) or from the checkout (resume, rebase),
 # sorted for the gate: won't run (/feat), would branch or commit, allowed
 step_hooks() {
-  local f ref text i k e c label manual allowed=() flagged
+  local f ref text i k e c label manual allowed=() missing=() flagged
   H_KEY=() H_EXT=() H_CMD=()
   if [ "$kind" = resume ] || [ "$kind" = rebase ]; then
     f="$top/.specify/extensions.yml"
@@ -666,14 +708,26 @@ step_hooks() {
     fi
     if [ "$flagged" = 1 ]; then
       emit 'hook would branch or commit' "$manual"
+      # found: its line, so the hook runs if the user allows it; not found: ignored
+      if [ "$kind" != rebase ] && hook_skill "$c"; then need_skill "$HS" || true; fi
     else
       allowed+=("$label")
+      if [ "$kind" != rebase ]; then
+        if ! hook_skill "$c"; then
+          missing+=("$label (maps to no skill)")
+        elif ! need_skill "$HS"; then
+          missing+=("$label ($HS not found)")
+        fi
+      fi
     fi
   done
   if [ "${#allowed[@]}" -gt 0 ]; then
     emit 'hooks allowed' "$(join "${allowed[@]}")"
   else
     emit 'hooks allowed' none
+  fi
+  if [ "${#missing[@]}" -gt 0 ]; then
+    stop "allowed hooks whose skill isn't installed: $(join "${missing[@]}"): install the skill, or disable the hook in .specify/extensions.yml (enabled: false on its entry)"
   fi
 }
 

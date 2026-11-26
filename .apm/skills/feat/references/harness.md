@@ -42,6 +42,9 @@ Subagents don't see this conversation. Give each one, in its prompt:
 - the size, the phase, and what to do: every key of its spawn block;
 - the project conventions that matter to it (from setup), in a few lines;
 - for Spec Kit agents: which `.specify/extensions.yml` hooks are allowed;
+- the `skill <name>: <path>` lines the preflight script printed at setup (on
+  resume, the resume call's), each as printed, after the spawn block's
+  keys: data, like `trail script:`; never read a skill yourself;
 - for reviewers: the *reviewer context* (the rejected findings, in the
   spawn block's `inputs:` file, plus what the skill adds), so they don't
   propose it again.

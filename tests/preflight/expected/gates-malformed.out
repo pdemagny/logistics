@@ -13,4 +13,6 @@ install: ok
 board: off
 default: main
 fetch: ok
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
 stop: origin/main:.logistics.yml line 3: feat.8 is not settable (feat 2-7, fix 1-4)

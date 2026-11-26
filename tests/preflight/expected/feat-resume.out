@@ -1,3 +1,5 @@
 kind: resume
 install: ok
 hooks allowed: none
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md

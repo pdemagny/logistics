@@ -9,4 +9,9 @@ gates: none
 default: main
 fetch: ok
 hooks allowed: none
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
+skill speckit-bug-assess: @TOP@/.claude/skills/speckit-bug-assess/SKILL.md
+skill speckit-bug-fix: @TOP@/.claude/skills/speckit-bug-fix/SKILL.md
+skill speckit-bug-test: @TOP@/.claude/skills/speckit-bug-test/SKILL.md
 slug: it-s-touch-pwned

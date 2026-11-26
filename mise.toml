@@ -15,7 +15,7 @@ go = "1.27.1"                   # Hugo fetches its theme as a Go module
 d2 = "0.9.0"                    # renders the diagrams in docs/img (`mise run diagrams`)
 
 [tasks.lint]
-description = "shellcheck the shell scripts (preflight.sh and trail.sh included) and their tests (tests/preflight and tests/trail included), actionlint the workflows, grep the skills for the state-file wording state.sh replaced, grep both SKILL.md files for a size table or a gate table, both and harness.md for merge rules 2-6 and the base and repair check prose, harness.md and move.md for the Harness values step.sh replaced (step.sh applies those rules now), both SKILL.md files for the setup prose preflight.sh replaced, the bug assessor and the implementer for the rename, slug and redaction prose trail.sh replaced, compile the Python test stub and measure.py (checked against Python 3.11), check sizes.tsv and the size tables' copies match sizes.json, validate the Claude Code plugin, check every agent denies Artifact and EnterWorktree, check the six agents' Last step paragraphs are the same"
+description = "shellcheck the shell scripts (preflight.sh and trail.sh included) and their tests (tests/preflight and tests/trail included), actionlint the workflows, grep the skills for the state-file wording state.sh replaced, grep both SKILL.md files for a size table or a gate table, both and harness.md for merge rules 2-6 and the base and repair check prose, harness.md and move.md for the Harness values step.sh replaced (step.sh applies those rules now), both SKILL.md files for the setup prose preflight.sh replaced, the bug assessor and the implementer for the rename, slug and redaction prose trail.sh replaced, compile the Python test stub and measure.py (checked against Python 3.11), check sizes.tsv and the size tables' copies match sizes.json, validate the Claude Code plugin, check every agent denies Artifact, EnterWorktree and Skill, check the six agents' Last step paragraphs are the same"
 run = [
   "shellcheck install.sh",
   "shellcheck .apm/skills/feat/scripts/*.sh",
@@ -45,7 +45,7 @@ run = [
   "! grep -Eq 'worktree list --porcelain|author_association|ls-remote --heads|git branch -m|enabled: false' .apm/skills/feat/SKILL.md .apm/skills/fix/SKILL.md",
   "! grep -Eq 'gh\\[opsur\\]_|xox\\[bp\\]-|github_pa\\[t\\]_|next free .n.|backticks and a trailing note' .apm/agents/feat-bug-assessor.agent.md .apm/agents/feat-implementer.agent.md",
   "test \"$(wc -l < .apm/skills/tiny/SKILL.md)\" -le 200 || { echo '/tiny is over 200 lines: keep it tiny'; exit 1; }",
-  '''bad=; for f in .apm/agents/*.agent.md; do l=$(grep -m1 "^disallowedTools:" "$f" | tr "," " "); for t in Artifact EnterWorktree; do case " $l " in *" $t "*) ;; *) echo "$f: disallowedTools lacks $t"; bad=1;; esac; done; done; test -z "$bad"''',
+  '''bad=; for f in .apm/agents/*.agent.md; do l=$(grep -m1 "^disallowedTools:" "$f" | tr "," " "); for t in Artifact EnterWorktree Skill; do case " $l " in *" $t "*) ;; *) echo "$f: disallowedTools lacks $t"; bad=1;; esac; done; done; test -z "$bad"''',
   '''ref=; for a in bug-assessor implementer planner shipper specifier tasker; do f=.apm/agents/feat-$a.agent.md; b=$(awk '/^\*\*Last step\*\*/{p=1} p&&/^$/{exit} p' "$f"); test -n "$b" || { echo "$f: no Last step paragraph"; exit 1; }; if test -z "$ref"; then ref=$b; elif test "$b" != "$ref"; then echo "$f: its Last step paragraph differs from feat-bug-assessor's: keep the six copies the same"; exit 1; fi; done''',
 ]
 
