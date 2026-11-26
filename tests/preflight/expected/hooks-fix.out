@@ -12,4 +12,10 @@ fetch: ok
 hook would branch or commit: before_specify: git.speckit.git.feature → run it by hand: /speckit-git-feature
 hook would branch or commit: after_implement: git.speckit.git.commit → run it by hand: /speckit-git-commit
 hooks allowed: after_implement: docs.speckit.docs.update
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
+skill speckit-bug-assess: @TOP@/.claude/skills/speckit-bug-assess/SKILL.md
+skill speckit-bug-fix: @TOP@/.claude/skills/speckit-bug-fix/SKILL.md
+skill speckit-bug-test: @TOP@/.claude/skills/speckit-bug-test/SKILL.md
+skill speckit-docs-update: @TOP@/.claude/skills/speckit-docs-update/SKILL.md
 slug: 7-save-button-crashes

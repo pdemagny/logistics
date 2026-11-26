@@ -86,6 +86,10 @@ git clone -q "$tmpl/origin.git" "$tmpl/repo" 2>/dev/null
   printf '%s\n' 'schema_version: "1.0"' 'extension:' '  id: bug' '  version: "1.4.2"' \
     'requires:' '  speckit_version: ">=0.9.0"' >.specify/extensions/bug/extension.yml
   printf 'readme\n' >README.md
+  for s in assess fix test; do
+    mkdir -p ".claude/skills/speckit-bug-$s"
+    printf -- '---\nname: speckit-bug-%s\n---\n' "$s" >".claude/skills/speckit-bug-$s/SKILL.md"
+  done
   git add -A
   git commit -q -m base
   git tag base
@@ -97,6 +101,18 @@ git clone -q "$tmpl/origin.git" "$tmpl/repo" 2>/dev/null
   git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
   git checkout -q -b worktree-x
 )
+
+# skill_in <project|home> <name>...: a SKILL.md for each skill in the case's
+# project (the top level) or in HOME
+skill_in() {
+  local d s
+  if [ "$1" = home ]; then d="$HOME/.claude/skills"; else d="$top/.claude/skills"; fi
+  shift
+  for s in "$@"; do
+    mkdir -p "$d/$s"
+    printf -- '---\nname: %s\n---\n' "$s" >"$d/$s/SKILL.md"
+  done
+}
 
 n=0
 # new_case <name>: a fresh copy; c (the case dir), top, org, base, pf (the
@@ -128,6 +144,8 @@ new_case() {
   for a in $FEAT_AGENTS; do printf -- '---\nname: feat-%s\n---\n' "$a" >"$c/base/.claude/agents/feat-$a.md"; done
   export PF_CASE="$c/case" HOME="$c/home"
   pf_path="$PATH"
+  # the lens skills, where `npx skills add -g` puts them
+  skill_in home security-and-hardening performance-optimization
 }
 
 # git_wrap: from now on in this case, preflight's git calls go through a
@@ -562,11 +580,16 @@ expect_exit 0
 expect_line 'install: ok'
 ok
 
-new_case "missing bug extension (fix); a speckit-bug skill instead; unknown version"
-command rm -rf -- "$top/.specify/extensions"
+new_case "missing bug skills (fix): all three needed, project or HOME; unknown version"
+command rm -rf -- "$top/.specify/extensions" "$top/.claude/skills"
 case_run 1 install-no-bug fix '#7'
 no_gh
-mkdir -p "$HOME/.claude/skills/speckit-bug-assess"
+skill_in home speckit-bug-assess
+pre fix '#7'
+expect_exit 1
+expect_last 'stop: the bug extension is missing (speckit-bug-fix, speckit-bug-test not found): run specify extension add bug in this project'
+skill_in project speckit-bug-fix
+skill_in home speckit-bug-test
 printf 'MEMBER\tT\n' >"$PF_CASE/issue-o-r-7"
 pre fix '#7'
 expect_exit 0
@@ -592,6 +615,158 @@ command rm -f -- "$yml"
 pre fix resume
 expect_exit 0
 expect_line 'bug extension: unknown'
+ok
+
+# --- skills read by path -------------------------------------------------------------
+
+INSTALL_LINE='npx -y skills@1.7.6 add https://github.com/addyosmani/agent-skills/tree/0.6.13/skills -s interview-me security-and-hardening performance-optimization -a claude-code -g -y'
+# lens_stop <names>: the lens stop as the output shows it (@TOP@ for the top level)
+lens_stop() {
+  printf 'stop: skills not installed: %s (searched @TOP@/.claude/skills and ~/.claude/skills; a skill only a plugin provides isn'\''t found): %s' "$1" "$INSTALL_LINE"
+}
+HOOK_STOP_TAIL=': install the skill, or disable the hook in .specify/extensions.yml (enabled: false on its entry)'
+
+new_case "skills: the lens skills in HOME"
+pre feat x
+expect_exit 0
+expect_line "skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md"
+expect_line "skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md"
+ok
+
+new_case "skills: the lens skills in the project"
+command rm -rf -- "$HOME/.claude/skills"
+skill_in project security-and-hardening performance-optimization
+pre feat x
+expect_exit 0
+expect_line "skill security-and-hardening: @TOP@/.claude/skills/security-and-hardening/SKILL.md"
+expect_line "skill performance-optimization: @TOP@/.claude/skills/performance-optimization/SKILL.md"
+ok
+
+new_case "skills: in both, the project's wins"
+skill_in project security-and-hardening
+pre feat x
+expect_exit 0
+expect_line "skill security-and-hardening: @TOP@/.claude/skills/security-and-hardening/SKILL.md"
+expect_line "skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md"
+ok
+
+new_case "skills: a missing lens skill stops with the install line (each, both)"
+command rm -rf -- "$HOME/.claude/skills/security-and-hardening"
+pre feat x
+expect_exit 1
+expect_last "$(lens_stop security-and-hardening)"
+expect_no_key install
+skill_in home security-and-hardening
+command rm -rf -- "$HOME/.claude/skills/performance-optimization"
+pre feat x
+expect_exit 1
+expect_last "$(lens_stop performance-optimization)"
+command rm -rf -- "$HOME/.claude/skills/security-and-hardening"
+case_run 1 skills-no-lens feat x
+expect_last "$(lens_stop 'security-and-hardening, performance-optimization')"
+no_gh
+ok
+
+new_case "skills: no HOME searches the project only"
+skill_in project security-and-hardening
+saved_home="$HOME"
+unset HOME
+pre feat x
+export HOME="$saved_home"
+expect_exit 1
+expect_last "$(lens_stop performance-optimization)"
+ok
+
+new_case "skills: an allowed hook's skill is resolved, one line for two hooks"
+skill_in project speckit-docs-update
+on_origin .specify/extensions.yml 'hooks:' '  before_implement:' '  - extension: docs' '    command: speckit.docs.update' \
+  '  after_implement:' '  - extension: docs' '    command: speckit.docs.update'
+pre feat x
+expect_exit 0
+expect_line "skill speckit-docs-update: @TOP@/.claude/skills/speckit-docs-update/SKILL.md"
+[ "$(printf '%s\n' "$out" | grep -c '^skill speckit-docs-update:')" = 1 ] || fail "want one line for the skill"
+ok
+
+new_case "skills: an allowed hook's skill missing stops, naming the hook"
+on_origin .specify/extensions.yml 'hooks:' '  after_implement:' '  - extension: docs' '    command: speckit.docs.update'
+case_run 1 skills-hook-missing feat x
+expect_line 'hooks allowed: after_implement: docs.speckit.docs.update'
+expect_last "stop: allowed hooks whose skill isn't installed: after_implement: docs.speckit.docs.update (speckit-docs-update not found)$HOOK_STOP_TAIL"
+expect_no_key slug
+ok
+
+new_case "skills: a hook with a non-speckit command, none or an empty name maps to no skill"
+on_origin .specify/extensions.yml 'hooks:' '  after_implement:' '  - extension: ext' '    command: ext.run' \
+  '  - extension: notes' '  - extension: bare' '    command: speckit.'
+pre feat x
+expect_exit 1
+expect_last "stop: allowed hooks whose skill isn't installed: after_implement: ext.ext.run (maps to no skill), after_implement: notes (maps to no skill), after_implement: bare.speckit. (maps to no skill)$HOOK_STOP_TAIL"
+ok
+
+new_case "skills: a hook that would commit gets a line when found, never a stop"
+on_origin .specify/extensions.yml 'hooks:' '  after_implement:' '  - extension: git' '    command: speckit.git.commit' \
+  '  - extension: git' '    command: git.nothing'
+pre feat x
+expect_exit 0
+expect_no_key 'skill speckit-git-commit'
+skill_in project speckit-git-commit
+pre feat x
+expect_exit 0
+expect_line "skill speckit-git-commit: @TOP@/.claude/skills/speckit-git-commit/SKILL.md"
+expect_line 'hooks allowed: none'
+ok
+
+new_case "skills: a hook that won't run gets no line and no stop"
+skill_in project speckit-docs-update
+on_origin .specify/extensions.yml 'hooks:' '  before_plan:' '  - extension: docs' '    command: speckit.docs.update' \
+  '  after_tasks:' '  - extension: other' '    command: other.run'
+pre feat x
+expect_exit 0
+expect_no_key 'skill speckit-docs-update'
+expect_line "hook won't run: before_plan: docs.speckit.docs.update → run it by hand: /speckit-docs-update"
+ok
+
+new_case "skills: /fix prints the bug skills after the lens skills; one missing stops"
+issue7
+pre fix '#7'
+expect_exit 0
+expect_line "skill speckit-bug-assess: @TOP@/.claude/skills/speckit-bug-assess/SKILL.md"
+expect_line "skill speckit-bug-fix: @TOP@/.claude/skills/speckit-bug-fix/SKILL.md"
+expect_line "skill speckit-bug-test: @TOP@/.claude/skills/speckit-bug-test/SKILL.md"
+[[ "$out" == *$'\nskill security-and-hardening: '*$'\nskill performance-optimization: '*$'\nskill speckit-bug-assess: '*$'\nskill speckit-bug-fix: '*$'\nskill speckit-bug-test: '*$'\nslug: '* ]] || fail "skill lines out of order"
+command rm -rf -- "$top/.claude/skills/speckit-bug-test"
+pre fix '#7'
+expect_exit 1
+expect_last 'stop: the bug extension is missing (speckit-bug-test not found): run specify extension add bug in this project'
+ok
+
+new_case "skills: rebase needs no lens or hook skill; /fix rebase still needs the bug skills"
+command rm -rf -- "$HOME/.claude/skills"
+printf '%s\n' 'hooks:' '  after_implement:' '  - extension: ext' '    command: ext.run' >"$top/.specify/extensions.yml"
+pre feat rebase
+expect_exit 0
+expect_no_key 'skill security-and-hardening'
+expect_line 'hooks allowed: after_implement: ext.ext.run'
+pre fix rebase
+expect_exit 0
+expect_line "skill speckit-bug-fix: @TOP@/.claude/skills/speckit-bug-fix/SKILL.md"
+expect_no_key 'skill performance-optimization'
+command rm -rf -- "$top/.claude/skills/speckit-bug-fix"
+pre fix rebase
+expect_exit 1
+expect_last 'stop: the bug extension is missing (speckit-bug-fix not found): run specify extension add bug in this project'
+ok
+
+new_case "skills: resume resolves from the checkout, hooks from its file"
+skill_in project speckit-mine-docs
+printf '%s\n' 'hooks:' '  after_implement:' '  - extension: mine' '    command: speckit.mine.docs' >"$top/.specify/extensions.yml"
+pre feat resume
+expect_exit 0
+expect_line "skill speckit-mine-docs: @TOP@/.claude/skills/speckit-mine-docs/SKILL.md"
+command rm -rf -- "$top/.claude/skills/speckit-mine-docs"
+pre feat resume
+expect_exit 1
+expect_last "stop: allowed hooks whose skill isn't installed: after_implement: mine.speckit.mine.docs (speckit-mine-docs not found)$HOOK_STOP_TAIL"
 ok
 
 # --- issue ---------------------------------------------------------------------------
@@ -848,18 +1023,21 @@ SPECKIT_HOOKS=(
 )
 
 new_case "hooks: Spec Kit's file on origin (feat brief: won't run, would commit, allowed)"
+skill_in project speckit-docs-update
 on_origin .specify/extensions.yml "${SPECKIT_HOOKS[@]}"
 case_run 0 hooks-feat feat x
 ok
 
 new_case "hooks: Spec Kit's file on origin (fix issue: only branch-or-commit hooks)"
 issue7
+skill_in project speckit-docs-update
 on_origin .specify/extensions.yml "${SPECKIT_HOOKS[@]}"
 case_run 0 hooks-fix fix '#7'
 expect_no_key "hook won't run"
 ok
 
 new_case "hooks: indented lists, quotes, comments, a hook under two keys"
+skill_in project speckit-docs-update
 on_origin .specify/extensions.yml 'hooks:' '  # the hooks' '  after_implement:' \
   '    - extension: "docs"' "      command: 'speckit.docs.update'   # inline" '      enabled: Yes' \
   '      description: >' '        folded text: with a colon' '        and - more' \
@@ -890,12 +1068,13 @@ expect_line 'hooks allowed: none'
 ok
 
 new_case "hooks: flagged by name (push, autocommit, open-pr, gitflow, pull requests, amend, squash, cherry-pick), not prompt or stage"
+skill_in project speckit-ext-prompt speckit-ext-stage speckit-notes-list
 on_origin .specify/extensions.yml 'hooks:' '  after_implement:' \
   '  - extension: shipit' '    command: release.push' \
   '  - extension: ext' '    command: autocommit' \
   '  - extension: ext' '    command: ext.open-pr' \
-  '  - extension: ext' '    command: ext.prompt' \
-  '  - extension: ext' '    command: stage' \
+  '  - extension: ext' '    command: speckit.ext.prompt' \
+  '  - extension: ext' '    command: speckit.ext.stage' \
   '  - extension: ext' '    command: ext.tag_all' \
   '  - extension: worktree-tools' '    command: speckit.wt.add' \
   '  - extension: gitflow' '    command: start' \
@@ -906,7 +1085,7 @@ on_origin .specify/extensions.yml 'hooks:' '  after_implement:' \
   '  - extension: ext' '    command: amend-last' \
   '  - extension: ext' '    command: squash' \
   '  - extension: ext' '    command: cherry-pick' \
-  '  - extension: notes'
+  '  - extension: notes' '    command: speckit.notes.list'
 pre fix 'button crashes' 'slug=button crashes'
 expect_exit 0
 expect_line 'hook would branch or commit: after_implement: shipit.release.push → run it by hand: /release-push'
@@ -922,7 +1101,7 @@ expect_line 'hook would branch or commit: after_implement: ext.openpullrequest �
 expect_line 'hook would branch or commit: after_implement: ext.amend-last → run it by hand: /amend-last'
 expect_line 'hook would branch or commit: after_implement: ext.squash → run it by hand: /squash'
 expect_line 'hook would branch or commit: after_implement: ext.cherry-pick → run it by hand: /cherry-pick'
-expect_line 'hooks allowed: after_implement: ext.ext.prompt, after_implement: ext.stage, after_implement: notes'
+expect_line 'hooks allowed: after_implement: ext.speckit.ext.prompt, after_implement: ext.speckit.ext.stage, after_implement: notes.speckit.notes.list'
 ok
 
 new_case "hooks: read from the fetched origin, not the checkout (brief, issue, symptom)"
@@ -942,16 +1121,17 @@ done
 ok
 
 new_case "hooks: resume and rebase read the checkout's file (rebase: implement part only)"
+skill_in project speckit-mine-plan speckit-mine-docs
 on_origin .specify/extensions.yml 'hooks:' '  after_implement:' '  - extension: git' '    command: speckit.git.commit'
-printf '%s\n' 'hooks:' '  before_plan:' '  - extension: mine' '    command: mine.plan' \
-  '  after_implement:' '  - extension: mine' '    command: mine.commit' '  - extension: mine' '    command: mine.docs' \
+printf '%s\n' 'hooks:' '  before_plan:' '  - extension: mine' '    command: speckit.mine.plan' \
+  '  after_implement:' '  - extension: mine' '    command: mine.commit' '  - extension: mine' '    command: speckit.mine.docs' \
   >"$top/.specify/extensions.yml"
 case_run 0 hooks-resume feat resume
 case_run 0 hooks-rebase feat rebase
 pre fix resume
 expect_exit 0
 expect_line 'hook would branch or commit: after_implement: mine.mine.commit → run it by hand: /mine-commit'
-expect_line 'hooks allowed: before_plan: mine.mine.plan, after_implement: mine.mine.docs'
+expect_line 'hooks allowed: before_plan: mine.speckit.mine.plan, after_implement: mine.speckit.mine.docs'
 if [[ "$out" == *git.commit* ]]; then fail "origin's hook listed"; fi
 ok
 
@@ -989,6 +1169,7 @@ hooks_bad 2 'hooks:' '- extension: x'
 ok
 
 new_case "hooks: hostile values are refused or skipped, never run"
+skill_in project speckit-docs-update
 # shellcheck disable=SC2016 # hostile text, never expanded
 on_origin .specify/extensions.yml 'hooks:' '  after_implement:' '  - extension: docs' \
   '    command: speckit.docs.update' '    description: $(touch pwned) `touch pwned2`' \

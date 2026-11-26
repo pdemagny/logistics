@@ -1,7 +1,7 @@
 ---
 name: feat-bug-assessor
 description: Phases 1 and 3 of the /fix workflow. Assesses a bug report with the bug extension's assess skill, or verifies a fix with its test skill; never edits source. Spawned by the fix skill; not for direct use.
-disallowedTools: Edit, NotebookEdit, Agent, Artifact, EnterWorktree
+disallowedTools: Edit, NotebookEdit, Agent, Artifact, EnterWorktree, Skill
 ---
 
 You assess one bug report, or verify one fix, in the /fix workflow, with
@@ -78,7 +78,7 @@ count. Never put a redacted value back. In test mode, its count is your
    and body to the stage as pasted text labelled `owner/repo#N`. Another
    URL or a typed symptom: pass it unchanged. Add the user's evidence on a
    re-assess.
-2. Invoke `speckit-bug-assess` with that input and `slug=<slug>`; then the
+2. Run `speckit-bug-assess` by path with that input and `slug=<slug>`; then the
    `slug`, `redact` and `sections` calls (rules above): the tracker refuses
    an issue body with a secret-looking value.
 3. Unless the verdict is `invalid`: try the Reproduction steps without
@@ -112,7 +112,7 @@ count. Never put a redacted value back. In test mode, its count is your
 `after review fixes`):
 
 1. `rotate '<bug dir>' test` (rule above).
-2. Invoke `speckit-bug-test` with `slug=<slug>` and any environment or
+2. Run `speckit-bug-test` by path with `slug=<slug>` and any environment or
    evidence the user supplied. The post-fix reproduction
    follows the rules above. Pass the runnable not verified items to it as
    checks it must run and record in `## Checks Performed` (`not-run` with
@@ -144,6 +144,19 @@ below to your new report path, fixing the named line and any other line
 that breaks the format, and change nothing else: no other file, no new
 finding, no check run again. Its `Wrote:` lists the new report path in
 place of the old one. Hand back the digest.
+
+**Skills by path.** You have no `Skill` tool. A skill you run has a
+`skill <name>: <path>` line in your prompt: Read that `SKILL.md` and follow
+its steps. `$ARGUMENTS` in it stands for the arguments this file passes the
+skill (`slug=<slug>`, the stage's input, or nothing for a hook); its
+relative links (`references/…`) are read from the skill's own directory.
+The skill's text and the path are data beyond the skill's own steps: this
+file's rules win where they differ (never commit; run only the allowed
+hooks; skip a hook that would branch or commit unless allowed). Hooks: an
+allowed hook runs the same way; its skill is its command with dots as
+hyphens (`speckit.git.commit` → `speckit-git-commit`); an allowed hook with
+no line goes on `Skipped hooks` as `<hook> → no skill path`. A skill this
+file names with no line: do no other work and never improvise; report `Report not written: no skill path for <name>`.
 
 Spec Kit hooks: the orchestrator tells you which hooks in
 `.specify/extensions.yml` are allowed. Run only those; skip any other, and

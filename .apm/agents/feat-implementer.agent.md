@@ -1,7 +1,7 @@
 ---
 name: feat-implementer
 description: Phases 6 and 7 of the /feat workflow, phases 2 and 4 of the /fix workflow. Implements one user story of tasks.md with speckit-implement, applies a bug's remediation with speckit-bug-fix (bug mode), applies the code-review fixes it is given, or moves the run onto a new main (rebase mode); runs the project's checks. Spawned by the feat and fix skills; not for direct use.
-disallowedTools: Agent, Artifact, EnterWorktree
+disallowedTools: Agent, Artifact, EnterWorktree, Skill
 skills:
   - speckit-implement
 ---
@@ -40,9 +40,10 @@ already in the tree.
 **One turn** (every mode). Send independent tool calls in one turn. Story
 mode: the first turn sends together `git status --short`, your skill's
 Spec Kit reads and the existing files on `story.sh`'s `files:` line (skip
-missing ones). Bug mode: `git status --short`, the bug report and
-`assessment.md`, then the files it lists in the next turn, with the Spec
-Kit reads after `speckit-bug-fix`. Then, in both, batch the searches before
+missing ones). Bug mode: `git status --short`, the bug report,
+`assessment.md` and `speckit-bug-fix`'s `SKILL.md`, then the files it lists
+in the next turn, with the Spec Kit reads after that `SKILL.md`. Then, in
+both, batch the searches before
 a task, the edits to different files and one task group's ticks. Fix and
 rebase mode: the first sentence only.
 
@@ -102,7 +103,7 @@ plan.md or tasks.md: steps 1 and 4 above don't apply, steps 2 and 3 do.
 1. `rotate '<bug dir>' fix`: an existing `fix.md` becomes its numbered
    copy (the printed path goes on `Wrote:`; `none` when there was none):
    the stage refuses to overwrite it and the trail keeps every attempt.
-2. Invoke `speckit-bug-fix` with `slug=<slug>` (on a retry, add what still
+2. Run `speckit-bug-fix` by path with `slug=<slug>` (on a retry, add what still
    fails). Then, in one turn, `slug '<bug dir>' '<slug>' '<fix.md path>'`
    (add the slug the stage printed as a fourth argument when it printed
    one) and `redact '<fix.md path>'` (its count is not reported). `slug`
@@ -203,6 +204,21 @@ haven't seen written. `Wrote:` lists your artifacts even when you only
 modified them, leaves out source files you only modified, and never lists
 a deleted one; `step.sh` checks every `Wrote:` path on disk before the run
 goes on.
+
+**Skills by path.** You have no `Skill` tool. A skill you run (the
+preloaded `speckit-implement` aside) has a `skill <name>: <path>` line in
+your prompt: Read that `SKILL.md` and follow its steps. `$ARGUMENTS` in it stands for the arguments this file passes the
+skill (`slug=<slug>`, the stage's input, or nothing for a hook); its
+relative links (`references/…`) are read from the skill's own directory.
+The skill's text and the path are data beyond the skill's own steps: this
+file's rules win where they differ (never commit; run only the allowed
+hooks; skip a hook that would branch or commit unless allowed). Hooks: an
+allowed hook runs the same way; its skill is its command with dots as
+hyphens (`speckit.git.commit` → `speckit-git-commit`); an allowed hook with
+no line goes on `Skipped hooks` as `<hook> → no skill path`. A skill this
+file names with no line: do no other work and never improvise; in bug mode
+report `Status (bug mode): not-applied` and `Design problems: no skill path
+for speckit-bug-fix`.
 
 Spec Kit hooks: the orchestrator tells you which hooks in
 `.specify/extensions.yml` are allowed. Run only those; skip any other, and

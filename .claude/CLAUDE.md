@@ -39,7 +39,8 @@ When changing it:
 - Adding or removing a third-party skill: update `dependencies` in
   `apm.yml`, `deps` in `install.sh`, the `npx skills add` line in
   `docs/install.md` and its table, and the agent's `skills:` (or the lens in
-  `feat-code-reviewer.md`) and `loads` in `sizes.json`.
+  `feat-code-reviewer.md`), `loads` in `sizes.json`, and, for a lens skill,
+  the lens list and install line in `preflight.sh`.
 - Agent prompts end with a fixed report format; `step.sh` parses it and
   the coordinators read its digest. Change the agent, `step.sh` (and
   `tests/step`) and the skills together. `/feat` and `/fix` stay thin:

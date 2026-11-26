@@ -14,4 +14,6 @@ board: off
 gates: none
 default: main
 fetch: ok
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
 stop: origin/main:.specify/extensions.yml can't be read as data (line 4); it may hide a hook that commits

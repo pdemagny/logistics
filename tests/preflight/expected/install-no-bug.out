@@ -1,2 +1,4 @@
 kind: issue
-stop: the bug extension is missing: run specify extension add bug in this project
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
+stop: the bug extension is missing (speckit-bug-assess, speckit-bug-fix, speckit-bug-test not found): run specify extension add bug in this project

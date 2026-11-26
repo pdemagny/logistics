@@ -168,7 +168,7 @@ Code plugin.
      `pointer:` lines (with the plugin form) and stop.
    - `kind: empty`: show the `usage:` line and stop.
    - `kind: issue` or `symptom`: keep `title:`, `issue:`, `author:`,
-     `bug extension:`, `hooks allowed:`, `slug:`, `board:`, `gates:` and
+     `bug extension:`, `hooks allowed:`, the `skill` lines, `slug:`, `board:`, `gates:` and
      `default:` (harness, Gates in force).
    - `kind: resume`: run steps 3 and 4, then follow Resume (below)
      instead of steps 5 and 6.

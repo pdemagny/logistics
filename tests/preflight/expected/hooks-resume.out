@@ -1,5 +1,8 @@
 kind: resume
 install: ok
-hook won't run: before_plan: mine.mine.plan → run it by hand: /mine-plan
+hook won't run: before_plan: mine.speckit.mine.plan → run it by hand: /speckit-mine-plan
 hook would branch or commit: after_implement: mine.mine.commit → run it by hand: /mine-commit
-hooks allowed: after_implement: mine.mine.docs
+hooks allowed: after_implement: mine.speckit.mine.docs
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
+skill speckit-mine-docs: @TOP@/.claude/skills/speckit-mine-docs/SKILL.md

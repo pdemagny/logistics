@@ -1,0 +1,12 @@
+kind: brief
+brief: @TOP@/specs/briefs/x.md
+brief in checkout: yes
+title: Do x
+size: medium
+size note: ~10 tasks, one script
+short name: x
+map: none
+issue: none
+behaviour: 2 lines
+acceptance: 2 lines
+stop: skills not installed: security-and-hardening, performance-optimization (searched @TOP@/.claude/skills and ~/.claude/skills; a skill only a plugin provides isn't found): npx -y skills@1.7.6 add https://github.com/addyosmani/agent-skills/tree/0.6.13/skills -s interview-me security-and-hardening performance-optimization -a claude-code -g -y

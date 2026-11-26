@@ -10,4 +10,6 @@ issue: none
 behaviour: 2 lines
 acceptance: 2 lines
 install: ok
+skill security-and-hardening: @C@/home/.claude/skills/security-and-hardening/SKILL.md
+skill performance-optimization: @C@/home/.claude/skills/performance-optimization/SKILL.md
 stop: board check failed: tracker: error: board users/u/projects/9 not found

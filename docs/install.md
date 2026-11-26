@@ -116,6 +116,14 @@ Restart Claude Code (or start a new session) after any of the three.
 They are declared in `apm.yml` (APM installs them) and in `install.sh`
 (`./install.sh deps`).
 
+The agents read these skills by path rather than through the Skill tool.
+At setup `/feat` and `/fix` look for each in `<project>/.claude/skills/`,
+then in `~/.claude/skills/`; a skill only a plugin provides is not found.
+Setup stops when `security-and-hardening` or `performance-optimization` is
+missing (except on `rebase`), naming it with the install line above, and
+when an allowed Spec Kit hook's skill can't be found: install it, or set
+the hook to `enabled: false` in `.specify/extensions.yml`.
+
 Three more checklists are built into `feat-code-reviewer` instead of being
 installed: the standards and spec review of lens 7a (from Matt Pocock's
 `code-review`), the over-engineering review of lens 7d (from the pre-v5
@@ -146,7 +154,9 @@ specify extension add bug
 ```
 
 It adds `speckit-bug-assess`, `speckit-bug-fix` and `speckit-bug-test`;
-`/fix` stops at setup and names this command when they are missing.
+`/fix` stops at setup and names this command when any of the three is
+missing (a deliberate change: the extension directory alone, or one of
+the skills, no longer passes).
 `/brief` and `/feat` don't need it.
 
 ## 4. Check

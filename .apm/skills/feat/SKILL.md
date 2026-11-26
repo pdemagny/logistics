@@ -127,7 +127,7 @@ what you add to each prompt, and what each gate message shows.
      pick one. Run this step again with the chosen path.
    - `kind: brief`: say the brief's path (`brief:`). Keep for phase 2
      `brief:`, `brief in checkout:`, `title:`, `size:`, `short name:`,
-     `map:`, `issue:`, `hooks allowed:` and `gates:`; `board:`, `gates:`
+     `map:`, `issue:`, `hooks allowed:`, the `skill` lines and `gates:`; `board:`, `gates:`
      and `default:` for step 4 (harness, Gates in force).
    - `kind: resume`: run steps 2 and 3, then the harness's Resume.
    - `kind: rebase`: run steps 2 and 3 (no step 4: `rebase` makes no board
@@ -137,8 +137,8 @@ what you add to each prompt, and what each gate message shows.
 2. Read the project's `CLAUDE.md` / `AGENTS.md` and project memory. They
    override this file where they disagree. Keep the few lines agents need
    (commit style, branch rules, where checks live, docs to update).
-3. **Hook gate**: the specifier, planner and tasker can't run hooks
-   (`Skill` is denied), so every `specify`, `plan`, `tasks` or `analyze`
+3. **Hook gate**: the specifier, planner and tasker get no hook skill paths
+   (they run no hooks), so every `specify`, `plan`, `tasks` or `analyze`
    hook won't run; `implement` hooks run, except those that would branch
    or commit (this workflow owns git), which agents skip unless the user
    says otherwise. If step 1 printed a `hook won't run:` or `hook would
