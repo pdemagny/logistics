@@ -3607,6 +3607,92 @@ size_from_tasks() {
   done
 }
 
+# num_norm <number>: NN = it without leading zeros or a zero fraction
+# (`100.0` and `100` read the same)
+num_norm() {
+  NN=$1
+  if [[ $NN == *.* ]]; then
+    while [[ $NN == *0 ]]; do NN=${NN%0}; done
+    NN=${NN%.}
+  fi
+  while [[ $NN == 0?* && $NN != 0.* ]]; do NN=${NN#0}; done
+}
+
+# analyze_metrics <file>: AM = the six numbers of analyze's own report (the
+# tasker saves it verbatim), read loosely from the lines under its Metrics
+# line (`- Total Requirements: 8`, `| Coverage % | 100% |`, …) in the
+# digest's order: requirements, tasks, coverage, ambiguities, duplications,
+# critical, space-separated and normalized. Returns 1 without the file, 2
+# without the Metrics line, 3 when a number is missing
+analyze_metrics() {
+  local line v k i st=0 nc=0 m=() num='([0-9]+(\.[0-9]+)?)' pct='([0-9]+(\.[0-9]+)?)[[:space:]]*%'
+  local head_re='^[#*[:space:]]*metrics[*:[:space:]]*$'
+  AM=
+  [[ -f $1 && -r $1 ]] || return 1
+  shopt -q nocasematch && nc=1
+  shopt -s nocasematch
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    if (( ! st )); then
+      [[ $line =~ $head_re ]] && st=1
+      continue
+    fi
+    case $line in '#'*) break ;; esac
+    k=
+    case $line in
+      *coverage*) k=2 ;;
+      *'total requirements'*) k=0 ;;
+      *'total tasks'*) k=1 ;;
+      *ambiguit*) k=3 ;;
+      *duplicat*) k=4 ;;
+      *critical*) k=5 ;;
+    esac
+    # the block ends at the next heading or a bold paragraph that names none
+    if [[ -z $k && $line == '**'* ]]; then break; fi
+    [[ -n $k && -z ${m[k]-} ]] || continue
+    # the value: a table row's last cell, else what follows the label's colon
+    # (the first one: a note after the value may hold more)
+    v=$line
+    if [[ $v == *'|'*'|'* ]]; then
+      v=${v%"${v##*[![:space:]]}"}
+      v=${v%|}
+      v=${v##*|}
+    elif [[ $v == *:* ]]; then
+      v=${v#*:}
+    fi
+    if [[ $k == 2 && $v =~ $pct ]]; then
+      m[k]=${BASH_REMATCH[1]}
+      continue
+    fi
+    if [[ $v =~ $num ]]; then m[k]=${BASH_REMATCH[1]}; fi
+  done <"$1"
+  (( nc )) || shopt -u nocasematch
+  (( st )) || return 2
+  for i in 0 1 2 3 4 5; do
+    [[ -n ${m[i]-} ]] || return 3
+    num_norm "${m[i]}"
+    AM+="${AM:+ }$NN"
+  done
+}
+
+# analyze_proof <Analyze metrics>: the reason, if any, why the digest's
+# `Analyze: ran` and these metrics are not borne out by reports/5-analyze.md
+analyze_proof() {
+  local w=() x dm='' rc=0
+  read -r -a w <<<"${1//[,%]/ }"
+  for x in "${w[0]}" "${w[2]}" "${w[4]}" "${w[6]}" "${w[8]}" "${w[10]}"; do
+    num_norm "$x"
+    dm+="${dm:+ }$NN"
+  done
+  analyze_metrics "$SFDIR/reports/5-analyze.md" || rc=$?
+  case $rc in
+    0) [[ $AM == "$dm" ]] || reason 'analyze metrics differ from 5-analyze.md' ;;
+    1) reason 'analyze not run (no analyze report)' ;;
+    2) reason 'analyze not run (no Metrics block in 5-analyze.md)' ;;
+    *) reason 'analyze not run (5-analyze.md lacks one of the six metrics)' ;;
+  esac
+}
+
 dec_feat_5() {
   local ok=0 n=0 it total tasks h
   if reparse 0 tasker; then
@@ -3622,6 +3708,9 @@ dec_feat_5() {
       # ran is proven only by analyze's own metrics (#97)
       elif ! pget 'Analyze metrics' || [[ $V == none ]]; then
         reason 'analyze not run (ran without its metrics)'
+      else
+        # and they must be analyze's own, saved in reports/5-analyze.md (#102)
+        analyze_proof "$V"
       fi
     else
       reason 'analyze: not said'

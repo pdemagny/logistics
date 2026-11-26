@@ -1,0 +1,3 @@
+hard:
+- analyze metrics differ from 5-analyze.md
+answer call:	5	@TOP@/specs/x/reports/5-tasks.md	sum=5-tasks.md:@SUM@

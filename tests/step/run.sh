@@ -109,6 +109,12 @@ put() {
   sed -e "s#@TOP@#$top#g" -e "s#@REPORT@#$R#g" "$fx/agents/$1.md" >"$R"
 }
 
+# put_analyze [<n tasks>]: analyze's own report (fixture tasker/analyze, its
+# Total Tasks set to n when given) as reports/5-analyze.md; R is untouched
+put_analyze() {
+  sed -e "s/^- Total Tasks: .*$/- Total Tasks: ${1:-6}/" "$fx/agents/tasker/analyze.md" >"$rd/5-analyze.md"
+}
+
 # S <state.sh args>: adjusts the case's state file
 S() { bash "$skill/scripts/state.sh" "$1" "$sf" "${@:2}" >/dev/null; }
 
@@ -545,6 +551,7 @@ new_case "feat 5 soft on small: the first story" feat
 S set Size small
 S set 'Current phase' '5 Tasks'
 S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+put_analyze
 put tasker/match 5-tasks
 run feat "$sf" 5 "$R"
 check feat5-soft 0
@@ -552,6 +559,7 @@ check feat5-soft 0
 new_case "feat 5 medium to small: a decrease" feat
 S set 'Current phase' '5 Tasks'
 S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+put_analyze
 put tasker/match 5-tasks
 run feat "$sf" 5 "$R"
 check feat5-decrease 0
@@ -580,11 +588,69 @@ new_case "feat 5 hard: analyze ran with metrics none" feat
 S set Size small
 S set 'Current phase' '5 Tasks'
 S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+put_analyze
 put tasker/match 5-tasks
 sed -i 's/^Analyze metrics: .*$/Analyze metrics: none/' "$R"
 run feat "$sf" 5 "$R"
 check feat5-metrics-none 0
 [ "$out" = "$(cat "$ex/feat5-no-metrics.out")" ] || fail "metrics none differs from metrics missing"
+
+# #102: the metrics must be analyze's own, saved as reports/5-analyze.md: no
+# file, a file without its Metrics block, or other numbers in it is hard
+feat5_ran() {
+  new_case "$1" feat
+  S set Size small
+  S set 'Current phase' '5 Tasks'
+  S log '- [x] 2 Specify [soft] — spec.md written' '    - Unchecked checklist items: none' '- [x] 3 Plan — merged with 4; assumptions needing you: none; constitution: pass; blockers: none; size trigger: none'
+  put_analyze
+  put tasker/match 5-tasks
+}
+
+feat5_ran "feat 5 hard: analyze ran with no analyze report"
+command rm -f "$rd/5-analyze.md"
+sed -i '/reports\/5-analyze\.md$/d' "$R"
+run feat "$sf" 5 "$R"
+check feat5-no-analyze 0
+
+feat5_ran "feat 5 hard: analyze report without its Metrics block"
+sed -i '/^\*\*Metrics:\*\*$/d' "$rd/5-analyze.md"
+run feat "$sf" 5 "$R"
+check feat5-analyze-no-block 0
+
+feat5_ran "feat 5 hard: analyze report without one of the six metrics"
+sed -i '/^- Duplication Count:/d' "$rd/5-analyze.md"
+run feat "$sf" 5 "$R"
+check feat5-analyze-short 0
+
+feat5_ran "feat 5 hard: analyze metrics differ from the analyze report"
+sed -i 's/^Analyze metrics: 8 requirements/Analyze metrics: 9 requirements/' "$R"
+run feat "$sf" 5 "$R"
+check feat5-analyze-differ 0
+
+# analyze's block read loosely: bold labels, a table, 100.0%, a heading
+feat5_ran "feat 5 soft: analyze metrics in another layout"
+printf '%s\n' '# Report' '' '## Metrics' '' '| Metric | Value |' '|---|---|' '| **Total Requirements** | 8 |' \
+  '| Total Tasks | 6 |' '| Coverage % (requirements with >=1 task) | 100.0% |' '| Ambiguity Count | 0 |' \
+  '| Duplication Count | 0 |' '| Critical Issues Count | 0 |' '' '**Next Actions:** none' >"$rd/5-analyze.md"
+run feat "$sf" 5 "$R"
+check feat5-soft-layout 0
+[ "${out%%$'\n'*}" = soft ] || fail "another layout is not soft"
+
+# a note after the value may hold colons: the value follows the first one
+feat5_ran "feat 5 soft: analyze metrics with notes holding colons"
+sed -i -e 's/^- Total Requirements: 8$/- Total Requirements: 8 (FR: 6, SC: 2)/' \
+  -e 's/^- Total Tasks: 6$/- Total Tasks: 6 (T001: setup)/' "$rd/5-analyze.md"
+grep -q '^- Total Tasks: 6 (T001: setup)$' "$rd/5-analyze.md" || fail "the notes were not written"
+run feat "$sf" 5 "$R"
+check feat5-soft-layout 0
+
+# a table's coverage cell without %: the value is the last cell, not the label's 1
+feat5_ran "feat 5 soft: analyze coverage cell without %"
+printf '%s\n' '**Metrics:**' '' '| Metric | Value |' '|---|---|' '| Total Requirements | 8 |' '| Total Tasks | 6 |' \
+  '| Coverage % (requirements with >=1 task) | 100 |' '| Ambiguity Count | 0 |' '| Duplication Count | 0 |' \
+  '| Critical Issues Count | 0 |' >"$rd/5-analyze.md"
+run feat "$sf" 5 "$R"
+check feat5-soft-layout 0
 
 # --- /feat 6 -------------------------------------------------------------------------------
 
@@ -1137,6 +1203,7 @@ reformat_on 'Risk area'
 
 new_case "format: Tasks holding more than its path" feat
 S set 'Current phase' '5 Tasks'
+put_analyze
 put tasker/match 5-tasks
 sed -i 's/^Tasks: \(.*\)$/Tasks: \1, 6 tasks/' "$R"
 run feat "$sf" 5 "$R"
@@ -1181,6 +1248,7 @@ reformat_why 'a value outside its format'
 
 new_case "format: Analyze metrics outside its format" feat
 S set 'Current phase' '5 Tasks'
+put_analyze
 put tasker/match 5-tasks
 sed -i 's/^Analyze metrics: .*$/Analyze metrics: looked fine/' "$R"
 run feat "$sf" 5 "$R"
@@ -1243,7 +1311,7 @@ msg="$(
   for f in "${fmt_files[@]}"; do
     b=${f##*/} d=${f%/*}
     d=${d##*/} mode=
-    case $b in today-layout.md | bad-* | *-bad-* | tasks.md) continue ;; esac
+    case $b in today-layout.md | bad-* | *-bad-* | tasks.md | analyze.md) continue ;; esac
     case $d/$b in
       specifier/* | planner/* | tasker/* | shipper/*) agent=$d ;;
       implementer/story-*) agent=implementer mode=story ;;
@@ -2119,6 +2187,7 @@ full_ans 'answer: picked D1, D2 (user: "D1 and D2 only")' "answer: leave D5 (use
 grep -qxF "    - answer: leave D5 (user: \"$leave_words\")" "$sf" || fail "the leave words are not logged byte for byte"
 grep -qxF "    - outcome: picked D1, D2; rejected D5 (user: \"$leave_words\")" "$sf" || fail "the leave words are not on the outcome"
 full_go planner/plain
+put_analyze
 full_go tasker/match
 full_override 'the user wants to see the tasks'
 full_ans 'answer: approved (user: "go on")'
@@ -2173,6 +2242,7 @@ full_go
 full_ans 'answer: stay (user: "not now")'
 call_line boundary
 put_at tasker/match "${CALL[1]}"
+put_analyze
 big_tasks
 full_go
 full_ans 'answer: approved (user: "62 tasks is fine")'
@@ -2694,7 +2764,8 @@ many_tasks() {
   else
     printf '%s\n' 'Open findings: none' >>"$R"
   fi
-  printf '%s\n' 'Unchecked checklist items: none' 'Skipped hooks: none' 'Wrote:' "- $top/specs/x/tasks.md" "- $R" >>"$R"
+  printf '%s\n' 'Unchecked checklist items: none' 'Skipped hooks: none' 'Wrote:' "- $top/specs/x/tasks.md" "- $rd/5-analyze.md" "- $R" >>"$R"
+  put_analyze "$1"
 }
 
 P2_CHK='    - Unchecked checklist items: requirements.md: CHK003 (recommended: yes)'
@@ -2744,7 +2815,7 @@ gate_at() {
       S set Size "$z"
       S set 'Current phase' '5 Tasks'
       S log "$P2_SOFT" "$P2_NONE" "$P3_FACTS"
-      if [ -n "$var" ]; then many_tasks "${var%+*}" "${var#*+}"; else put tasker/match 5-tasks; fi
+      if [ -n "$var" ]; then many_tasks "${var%+*}" "${var#*+}"; else put_analyze; put tasker/match 5-tasks; fi
       run feat "$sf" 5 "$R" ;;
     f6)
       S set Size "$z"
