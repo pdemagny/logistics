@@ -61,8 +61,10 @@ Answers:
 ## At ship
 
 A shipper report `PR: conflict` pushed nothing; its `Conflicts:` lists the
-files. `step.sh` prints `read:` (this file) and the rebase-mode spawn
-(`shipped: no`); its `boundary:` line carries the ship report with its
+files, or reads `none` when main moved after the shipper's rebase (its
+publish found a new main before pushing). Both go the same way. `step.sh`
+prints `read:` (this file) and the rebase-mode spawn (`shipped: no`); its
+`boundary:` line carries the ship report with its
 `sum=` and the move's report. Follow it: a move that needs the user's call
 stops at the move gate first; a kept one logs the move (`at ship`) and
 prints the ship spawn again, as the first time. When the shipper numbered
