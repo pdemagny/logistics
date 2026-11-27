@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/pdemagny/logistics/compare/v1.1.0...v1.2.0) (2026-11-27)
+
+
+### Features
+
+* **brief:** open issue runs with a briefing and show option tradeoffs as a table ([655e29b](https://github.com/pdemagny/logistics/commit/655e29b5abe378f77f208e2d452ed1b33635b6d7))
+
+
+### Bug Fixes
+
+* **agents:** keep a long check from leaving a Monitor that re-wakes the agent ([aabea47](https://github.com/pdemagny/logistics/commit/aabea472cb6bd90df1c2477aece4ba15de056566))
+* **skills:** stop publish from pushing onto a main that moved during the checks ([b34d8fc](https://github.com/pdemagny/logistics/commit/b34d8fc0b5d6e40021ab81a4d02c1ce011c83921))
+
 ## [1.1.0](https://github.com/pdemagny/logistics/compare/v1.0.0...v1.1.0) (2026-11-26)
 
 
