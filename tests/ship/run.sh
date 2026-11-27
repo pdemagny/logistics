@@ -504,12 +504,9 @@ new_case "ship: renumbered at publish"
 std_notes
 ship prepare
 want_rc 0
-git clone -q "$org" "$c/other" 2>/dev/null
-mkdir -p "$c/other/specs/001-other"
-printf 'other\n' >"$c/other/specs/001-other/spec.md"
-git -C "$c/other" add -A
-git -C "$c/other" commit -q -m 'other feature'
-git -C "$c/other" push -q origin HEAD:main 2>/dev/null
+# an open PR took 001 since prepare (main moving instead is a conflict)
+printf '%s\n' '7 false other' >"$SHIP_CASE/prs"
+printf '%s\n' 'specs/001-other/spec.md' >"$SHIP_CASE/files-7"
 ship publish
 want_rc 0
 golden ship-renumber
@@ -876,7 +873,8 @@ new_case "stop: a gh failure after a renumber, then publish again with the earli
 std_notes
 ship prepare
 want_rc 0
-on_main specs/001-other/spec.md $'other\n'
+printf '%s\n' '7 false other' >"$SHIP_CASE/prs"
+printf '%s\n' 'specs/001-other/spec.md' >"$SHIP_CASE/files-7"
 : >"$SHIP_CASE/fail-repo"
 sd="$top/specs/001-x"
 rd="$sd/reports"
@@ -941,6 +939,59 @@ git -C "$top" commit -q -am 'docs: more'
 ship publish
 blocked '! ship: HEAD moved since prepare; nothing pushed'
 no_push
+ok
+
+# moved_main: PR: conflict, Conflicts: none, exit 1
+moved_main() {
+  want_rc 1
+  [ "$(printf '%s\n' "$raw" | head -n 1)" = 'PR: conflict' ] || fail "not PR: conflict"
+  grep -qx 'Conflicts: none' <<<"$raw" || fail "Conflicts: not none"
+}
+
+new_case "stop: main moved since prepare (ship)"
+std_notes
+ship prepare
+want_rc 0
+head="$(git -C "$top" rev-parse HEAD)"
+on_main docs/other.md $'other\n'
+ship publish
+moved_main
+golden ship-moved
+[ "$(git -C "$top" rev-parse HEAD)" = "$head" ] || fail "HEAD changed"
+[ "$(git -C "$top" rev-parse refs/remotes/origin/main)" = "$(git -C "$org" rev-parse refs/heads/main)" ] ||
+  fail "origin/main not fetched"
+no_push
+index_empty
+! grep -q '^pr create' "$SHIP_CASE/calls" || fail "gh pr create was called"
+[ "$(cat "$top/specs/001-x/reports/8-ship.md")" = "$raw" ] || fail "report file differs from stdout"
+ok
+
+fix_case "stop: main moved since prepare (fix)" '#10' '- [x] 3 Test — verified: all checks pass'
+fix_notes
+fix prepare --security-bug no
+want_rc 0
+head="$(git -C "$top" rev-parse HEAD)"
+on_main docs/other.md $'other\n'
+fix publish --security-bug no
+moved_main
+[ "$(git -C "$top" rev-parse HEAD)" = "$head" ] || fail "HEAD changed"
+no_push
+[ ! -e "$SHIP_CASE/calls" ] || fail "gh was called"
+[ "$(cat "$brd/5-ship.md")" = "$raw" ] || fail "report file differs from stdout"
+ok
+
+new_case "stop: main moved after the push, publish again still opens the PR"
+std_notes
+ship prepare
+want_rc 0
+: >"$SHIP_CASE/fail-create"
+ship publish
+blocked '! gh pr create: HTTP 502'
+command rm -f "$SHIP_CASE/fail-create"
+on_main docs/other.md $'other\n'
+ship publish
+want_rc 0
+[ "$(printf '%s\n' "$raw" | head -n 1)" = 'PR: https://github.com/o/r/pull/42' ] || fail "no PR line"
 ok
 
 # --- US3: rebase mode --------------------------------------------------------------------
@@ -1108,6 +1159,20 @@ golden rebase-conflict
 [ "$(git -C "$top" rev-parse HEAD)" = "$lease" ] || fail "not reset to the lease"
 ! grep -qx 'Mode: rebase' "$rd/ship-handoff.md" || fail "a rebase handoff was written"
 at_lease
+ok
+
+shipped_case "rebase: main moved since prepare resets to the lease"
+on_main docs/other.md $'other\n'
+rebase_notes
+reb prepare
+want_rc 0
+on_main docs/more.md $'more\n'
+reb publish
+moved_main
+[ "$(git -C "$top" rev-parse HEAD)" = "$lease" ] || fail "not reset to the lease"
+at_lease
+! grep -q '^pr view' "$SHIP_CASE/calls" 2>/dev/null || fail "gh pr view was called"
+[ "$(cat "$rd/r-ship.md")" = "$raw" ] || fail "report file differs from stdout"
 ok
 
 shipped_case "rebase: --pr of another branch, then of another repo"

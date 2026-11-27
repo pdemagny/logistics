@@ -617,10 +617,17 @@ closed PR. Never merges.
 
 If main moved since the phase's base check and the shipper's rebase
 conflicts, it aborts the rebase, pushes nothing and reports `PR: conflict`
-with the conflicting files; it never resolves them itself. `/feat` (and
-`/fix` at its phase 5) then moves the run with `feat-implementer` in
-rebase mode, as at any phase boundary (see [When main moves](#when-main-moves)),
-and spawns the shipper a second time, as the first. That move's Log line
+with the conflicting files; it never resolves them itself. Main moving
+while the shipper runs its checks reads the same: `publish` fetches main
+again before it pushes and, when main is no longer the base `prepare`
+rebased onto, pushes nothing and reports `PR: conflict` with `Conflicts:
+none` (a retry that finds the branch already pushed opens the PR as
+before). This narrows the race without removing it: a merge right after
+the push still conflicts on GitHub, and `/feat rebase` handles it.
+`/feat` (and `/fix` at its phase 5) then moves the run with
+`feat-implementer` in rebase mode, as at any phase boundary (see
+[When main moves](#when-main-moves)), and spawns the shipper a second
+time, as the first. That move's Log line
 is written after the second report, in the local state file only, and the
 final message lists it. Before any push, in every mode, the shipper checks
 the commits it would push: a `logistics-wip:` commit (a move's temporary

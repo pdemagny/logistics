@@ -94,6 +94,8 @@ file's dir.
 5. **publish.** Run `bash '<ship script>' publish ship` with the same
    flags. Its printed report is the result. A report blocked on a `! gh
    <verb>: …` line after the push may be retried with `publish`, once.
+   `PR: conflict` with `Conflicts: none` means main moved during the
+   checks: nothing was pushed; report it as it is, never prepare again.
 6. **Never** run git or gh yourself to stage, commit, rebase, push, merge
    or open or edit a PR; never force-push; never resolve a conflict; never
    edit the files the script writes in `reports/` (handoff, report).

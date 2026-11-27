@@ -14,12 +14,15 @@
 # prepare checks the notes file, numbers the spec dir (ship mode), commits
 # each notes commit by path, scans what it stages, fetches and rebases onto
 # origin/<default> and writes the handoff next to the notes. publish folds
-# the check fixes made between the calls, checks the spec number again,
-# runs the WIP check and the range scan, builds the PR body, pushes and
-# opens the PR. Rebase mode: prepare commits the --check-fix paths and the
-# Log lines before its rebase and prints `Brought in:`; publish folds
-# nothing, checks the --pr URL's head and repo, pushes with the lease
-# (reset to it when refused) and edits the PR body under `### Rebases`.
+# the check fixes made between the calls, fetches origin/<default> again
+# (moved since prepare: `PR: conflict` with `Conflicts: none`, nothing
+# pushed), checks the spec number again, runs the WIP check and the range
+# scan, builds the PR body, pushes and opens the PR. Rebase mode: prepare
+# commits the --check-fix paths and the Log lines before its rebase and
+# prints `Brought in:`; publish folds nothing, makes the same base check
+# (moved: the branch back on the lease), checks the --pr URL's head and
+# repo, pushes with the lease (reset to it when refused) and edits the PR
+# body under `### Rebases`.
 #
 # Exit 0 done (prepare prints its own output, publish the report), 1 `PR:
 # blocked` or `PR: conflict` (the shipper's report, printed and written to
@@ -953,6 +956,32 @@ rewritten() {
   return 1
 }
 
+# pushed_at_head: a retry finds the branch already pushed at HEAD
+# (origin/<branch> is HEAD and, in rebase mode, HEAD is not the lease)
+pushed_at_head() {
+  local head pushed lease_sha=''
+  head=$(git rev-parse HEAD)
+  pushed=$(git rev-parse -q --verify "refs/remotes/origin/$BRANCH" 2>/dev/null) || pushed=''
+  if [[ $MODE == rebase ]]; then lease_sha=$(git rev-parse -q --verify "$V_lease^{commit}" 2>/dev/null) || lease_sha=''; fi
+  [[ $pushed == "$head" && $head != "$lease_sha" ]]
+}
+
+# base_check: origin/<default> fetched again before any push; moved since
+# prepare's Base:, nothing is pushed and the report is `PR: conflict` with
+# `Conflicts: none`, so the run moves onto the new main, reruns its checks
+# and ships again (rebase mode: the branch back on the lease first, as a
+# rebase conflict leaves it). A retry that finds the branch already pushed
+# at HEAD skips it: nothing is left to push.
+base_check() {
+  local main
+  if pushed_at_head; then return 0; fi
+  fetch_default
+  main=$(git rev-parse -q --verify "refs/remotes/origin/$V_default^{commit}" 2>/dev/null) || main=''
+  [[ $main != "$BASE" ]] || return 0
+  if [[ $MODE == rebase ]]; then git reset -q --keep "$V_lease" >/dev/null 2>&1 || true; fi
+  conflict
+}
+
 # number_check: the spec number checked again; a number taken since prepare
 # is renumbered in the PR's own files, with fixups
 number_check() {
@@ -1147,11 +1176,8 @@ add_note() {
 # lease_push: the push with the lease; refused, the branch back to the lease.
 # A retry after `gh pr edit` failed finds the branch already pushed at HEAD.
 lease_push() {
-  local pushed head lease_sha rc=0 l
-  head=$(git rev-parse HEAD)
-  pushed=$(git rev-parse -q --verify "refs/remotes/origin/$BRANCH" 2>/dev/null) || pushed=''
-  lease_sha=$(git rev-parse -q --verify "$V_lease^{commit}" 2>/dev/null) || lease_sha=''
-  if [[ $pushed == "$head" && $head != "$lease_sha" ]]; then return 0; fi
+  local rc=0 l
+  if pushed_at_head; then return 0; fi
   # an explicit destination: push.default or remote.origin.push never redirect it
   git push -q --force-with-lease="refs/heads/$BRANCH:$V_lease" origin "refs/heads/$BRANCH:refs/heads/$BRANCH" \
     >"$SCR/out" 2>"$SCR/err" || rc=$?
@@ -1198,14 +1224,13 @@ publish_rebase() {
 # publish_ship: ship and fix mode after the checks: the PR body built and
 # scanned, the push, `gh pr create`
 publish_ship() {
-  local title url pushed p
+  local title url p
   title=${H_COMMITS[${#H_COMMITS[@]} - 1]}
   build_body
   if secret_rule "$BODY"; then block "! secret scan: PR body matches $SECRET_RULE"; fi
   printf '%s' "$BODY" >"$SCR/body"
   # a retry after `gh pr create` failed: the branch is already pushed at HEAD
-  pushed=$(git rev-parse -q --verify "refs/remotes/origin/$BRANCH" 2>/dev/null) || pushed=''
-  if [[ $pushed != "$(git rev-parse HEAD)" ]]; then push_branch; fi
+  if ! pushed_at_head; then push_branch; fi
   gh_run 'pr create' pr create --base "$V_default" --head "$BRANCH" --title "$title" --body-file "$SCR/body"
   url=''
   while IFS= read -r p; do
@@ -1227,6 +1252,7 @@ publish() {
     # the check fixes made between the calls
     commit_notes "$BASE"
   fi
+  base_check
   number_check
   # a fixup an earlier, blocked publish made before its autosquash
   while IFS= read -r s; do
