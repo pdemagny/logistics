@@ -58,7 +58,13 @@ Invoke `interview-me` with the idea and follow its steps 1–5 (hypothesis,
 one question at a time with your guess attached, want vs. should-want), with
 two changes: its restate (step 4) is the brief below, and its confirmation
 (step 5) is the gate of this skill, so the user confirms once. Skip its
-step 6: don't offer to save the intent or hand off to other skills.
+step 6: don't offer to save the intent or hand off to other skills. When a
+question has at least 3 viable options (ones you would defend), or 2 that
+differ on at least 2 criteria the user would weigh, put one markdown table
+between the question and your guess (a row per option, a column per
+separating criterion, the recommended row marked), then the guess and its
+strongest counter-argument; yes/no, "keep as written" and single-road
+questions get none.
 
 Cover at least: who uses it and why now, how it's handled today and why
 that isn't enough, the observable behaviour, what is out of scope, the
@@ -83,6 +89,16 @@ counter-argument. An issue labelled as a bug is not for this workflow:
 point to `/fix #N` (`/logistics:fix #N` as a plugin) and stop. If it can't be read, ask the user to paste the issue. With
 board tracking, read it with the script's `read-issue <ref>` instead (a
 URL becomes `owner/repo#N`, or `#N` for this repo).
+Hold the first interview message, not before: once the issue is read (any
+of these ways, pasted included), the code and docs it touches are read and
+the `/tiny` offer is declined or doesn't apply, open it with a "Where it
+stands" briefing in your words, one or two lines each, neither a copy of
+the body nor a follow of it: The ask (the problem and who has it), Today
+(what the code and docs do now, with file:line, and what's missing),
+Already decided (what the issue settles), Open (its unchecked items and
+anything found unclear); leave out an empty bullet. Interview-me's
+hypothesis, confidence and first question follow in the same message: one
+stop.
 
 From a brief (`/brief <path>`, a file starting `# Brief:`): any size but
 `tiny` is already full: point to `/feat <path>` (`/logistics:feat` as a

@@ -39,7 +39,9 @@ Words you'll meet:
 ## 1. Brief: `/brief "<idea>"`
 
 Claude reads the code the idea touches, then asks you questions one at a
-time (`interview-me`), each with its guess attached. It proposes a size and
+time (`interview-me`), each with its guess attached. When a question is a real choice between
+roads, you get one table of the options by criteria, the recommended one
+marked, before the guess; yes/no questions get none. It proposes a size and
 writes the brief to `specs/briefs/<short-name>.md` at the top of the repo
 (of its worktree when you run it in one): why, how it's handled
 today, behaviour, out of scope, alternatives rejected, acceptance,
@@ -61,7 +63,10 @@ can also write a brief by hand in the same format and skip this step.
 
 From a GitHub issue, run `/brief #N` (or pass its URL): Claude reads it
 with `gh`, its title and body are the idea and its unchecked checklist items
-are questions the interview answers. The brief records the issue, and the PR
+are questions the interview answers. It reads the code and docs the
+issue touches and opens with "Where it stands" (the ask, today with
+file:line, what is decided, what is open), then asks its first question in
+the same message. The brief records the issue, and the PR
 says `Closes #N`, so merging closes it.
 
 From a tiny brief, run `/brief <its path>` (`/tiny` hands you this when

@@ -297,8 +297,15 @@ The path is anchored to the checkout's top level (`git rev-parse
 a git checkout it asks for the repo's path before the interview and stops
 without one, and the board check, the reads and the write all use that
 top level. Its last lines print the absolute path.
+When a question has at least 3 viable options, or 2 that differ on at least
+2 criteria you would weigh, it puts one table (options by criteria, the
+recommended row marked) before its guess; yes/no, "keep as written" and
+single-road questions get none.
 From an issue (`/brief #N` or its URL) it reads the issue with `gh` as
-the idea and records it in the brief; the shipper's PR says `Closes #N`.
+the idea and records it in the brief; after the `/tiny` offer, its first
+interview message opens with a "Where it stands" briefing (the ask, today
+with file:line, what is decided, what is open; empty bullets left out) and
+ends with the first question. The shipper's PR says `Closes #N`.
 With [board tracking](#board-tracking) it checks the board first, moves the
 issue to Brief, and after the gate offers to create the issue when the
 brief has none. From a tiny brief (`/brief <path>`, what `/tiny` hands off
